@@ -1,0 +1,170 @@
+﻿@page "/database"
+@using System.Text
+@using ActivationReport.Models
+@using CommunityToolkit.Maui.Views
+
+<article>
+    <h3>Управление базой данных</h3>
+
+    <p calss="row">
+        <label class="col-3">Количество записей в БД</label>
+        <button class="btn btn-outline-primary col-2" @onclick="countDatabaseEntries">Посчитать</button>
+        @if (baseCount != null)
+        {
+            <label class="col-6 mx-2 fs-6"> Количество записей: @baseCount, дата последней записи: @baseDate</label>
+        }
+    </p>
+
+    <p class="row align-items-center">
+        <label class="col-3">Файл для загрузки в базу данных</label>
+        <button class="btn btn-outline-primary col-2" @onclick="selectFile">Выбрать файл</button>
+        @if (filePath != null)
+        {
+            <label class="col-6 mx-2 fs-6">@filePath</label>
+        }
+        else
+        {
+            <label class="col-2 mx-12 fs-6">Файл не выбран!</label>
+        }
+    </p>
+
+    @if (filePath != null)
+    {
+        <p class="row justify-content-end">
+            <button class="btn btn-primary col-4" @onclick="ParseAndLoad">Загрузить в базу данных</button>
+        </p>
+    }
+</article>
+
+@code {
+    private static string? filePath;
+    private static string? baseCount;
+    private static string? baseDate;
+
+    private async Task selectFile()
+    {
+        var customFileType = new FilePickerFileType(
+                new Dictionary<DevicePlatform, IEnumerable<string>>
+                                {
+                        { DevicePlatform.WinUI, new[] { ".csv" } }, // file extension
+                                });
+
+        var response = await FilePicker.PickAsync(new PickOptions
+            {
+                PickerTitle = "Pick CSV file",
+                FileTypes = customFileType,
+            });
+
+        if (response != null)
+            filePath = response.FullPath;
+    }
+
+    private void countDatabaseEntries()
+    {
+        using (var db = new AppDBContext())
+        {
+            baseCount = db.Activations.Count().ToString();
+            baseDate = db.Activations.OrderBy(a => a.ActDate).Last().ActDate.ToShortDateString();
+        }
+    }
+
+    private void ParseAndLoad()
+    {
+        string row;
+        string[] separateRow;
+        int count = 0;
+        int totalCount = 0;
+        List<Activation> list = new List<Activation>();
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+        using (var csvReader = new StreamReader(filePath, Encoding.GetEncoding(1251)))
+        {
+            using (var db = new AppDBContext())
+            {
+                var listDB = db.Activations.ToList();
+                csvReader.ReadLine();   //skip first line
+                while ((row = csvReader.ReadLine()) != null && !row.Substring(0, 1).Equals(";"))
+                {
+                    separateRow = row.Split(";", System.StringSplitOptions.RemoveEmptyEntries);
+
+                    if (separateRow.Length > 19)
+                    {
+                        for (int i = 0; i < separateRow.Length-1; i++)
+                        {   
+                            if (separateRow[i].Equals(""))
+                            {
+                                continue;
+                            }
+                            if ((!separateRow[i].Substring(separateRow[i].Length - 1, 1).Equals("\"") && !separateRow[i + 1].Substring(0, 1).Equals("\"")) ||
+                                (!separateRow[i + 1].Substring(0, 1).Equals("\"") && !separateRow[i + 1].Substring(0, 1).Equals("=")))
+                            {
+                                separateRow[i] = separateRow[i] + ";" + separateRow[i + 1];
+                                separateRow[i + 1] = "";
+                                //i++;
+                            }
+                        }
+                        separateRow = separateRow.Where(s => !string.IsNullOrEmpty(s)).ToArray();
+                    }
+
+                    if (separateRow.Length != 19)
+                    {
+                        Application.Current.MainPage.DisplayAlert("Ошибка разбора строки", row, "Ок");
+                        return;
+                    }
+
+                    if (!separateRow[1].Substring(1, 5).Equals("Отказ") && !separateRow[1].Substring(1, 5).Equals("Ожида"))
+                    {
+                        var newAct = new Activation
+                            {
+                                CompanyId = Convert.ToInt16(separateRow[0].Substring(4, 10)),
+                                ActDate = Convert.ToDateTime(separateRow[3].Replace("\"", "")).ToUniversalTime().AddHours(3.0),
+                                CardNumber = separateRow[0],
+                                DateRequest = separateRow[2],
+                                DateAnswer = separateRow[3],
+                                CompanyName = separateRow[4],
+                                OGRN = separateRow[5],
+                                INN = separateRow[6],
+                                Region = separateRow[7],
+                                City = separateRow[8],
+                                Address = separateRow[9],
+                                VehicleBrand = separateRow[10],
+                                VehicleModel = separateRow[11],
+                                VehicleYear = separateRow[12],
+                                VehicleColor = separateRow[13],
+                                VRN = separateRow[14],
+                                VIN = separateRow[15],
+                                VehiclePassport = separateRow[16],
+                                CryptoBlock = separateRow[17],
+                                TachoNumber = separateRow[18]
+                            };
+
+                        if (!listDB.Exists(x => x.CryptoBlock == newAct.CryptoBlock))
+                        {
+
+                            //var test = listDB.Exists(x => x == newAct);
+                            list.Add(newAct);
+                            count++;
+                            totalCount++;
+                        }                        
+                    }
+
+                    if (count >= 100)
+                    {
+                        db.Activations.AddRange(list);
+                        db.SaveChanges();
+                        list.Clear();
+                        count = 0;
+                    } 
+                }
+                if (count < 100)
+                {
+                    db.Activations.AddRange(list);
+                    db.SaveChanges();
+                }
+            }            
+        }
+        filePath = null;
+        Application.Current.MainPage.DisplayAlert("Уведомление",
+                                                  "Файл обработан. В базу данных загружено записей: " + totalCount.ToString(), "Ок");
+    }
+}

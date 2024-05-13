@@ -1,0 +1,98 @@
+﻿@using ActivationReport.Models
+
+<article> 
+    @if (ECompany.Cards.Count() > 0)
+    {
+        <h4>Редактирование данных компании</h4>
+    } 
+    else
+    {
+        <h4>Создание новой компании</h4>
+    }
+    
+    <div class="row mb-2">
+        <span class="col-2">Название компании</span>
+        <input @bind="ECompany.Name" class="col-8 " type="text" />
+    </div>
+    <div class="row mb-2">   
+        <span class="col-2">Трудоустроен к нам</span>
+        <input @bind="ECompany.Staff" class="col-1" type="checkbox" />
+    </div>
+    <div class="row mb-2">
+        <span class="col-2">Ежемесячный отчёт</span>
+        <input @bind="ECompany.MonthlyReport" class="col-1" type="checkbox" />
+    </div>
+    <div class="row mb-2">
+        @if (ECompany.Cards != null && ECompany.Cards.Count > 0)
+        {
+            <div>Список карт:</div>
+            @foreach (var card in ECompany.Cards)
+            {
+                <div class="mb-2">
+                    <input class="col-3" @bind="@card.CardNumber" />
+                    <button class="btn btn-close col-1" @onclick="() => ECompany.Cards.Remove(card)"/>
+                </div>                
+            }
+        }
+        else
+        {
+            <div>Карты не указаны</div>
+        }
+        <button class="btn btn-outline-success col-3 ms-2" @onclick="() => ECompany.Cards.Add(new Card())">Добавить новую карту</button>
+    </div>    
+
+
+    <div class="row justify-content-end">
+        @if (ECompany.Cards.Count() > 0)
+        {
+            <button class="btn btn-primary col-3 me-2" @onclick="updateCompany">Обновить данные</button>            
+        } 
+        else
+        {
+            <button class="btn btn-primary col-3 me-2" @onclick="saveCompany">Сохранить изменения</button>
+        }
+        <button class="btn btn-danger col-2 me-2" @onclick="cancelled">Отмена</button>
+    </div>
+</article>
+
+
+@code {
+    [Parameter]
+    public bool Edit { get; set; }
+    [Parameter]
+    public EventCallback<bool> EditChanged { get; set; }
+
+    [Parameter]
+    public Company ECompany { get; set; }
+    [Parameter]
+    public EventCallback<Company> ECompanyChanged { get; set; }
+
+    private async Task cancelled()
+    {
+        await ECompanyChanged.InvokeAsync(new Company
+                                                    {
+                                                        Cards = new List<Card>()
+                                                    });
+        await EditChanged.InvokeAsync(false);
+    }
+
+    public void saveCompany()
+    {
+        using (var db = new AppDBContext())
+        {
+            db.Companies.Add(ECompany);
+            db.SaveChanges();
+        }
+        cancelled();
+    }
+
+    public void updateCompany()
+    {
+        using (var db = new AppDBContext())
+        {
+            db.Companies.Update(ECompany);
+            db.SaveChanges();
+        }
+        cancelled();
+    }
+}

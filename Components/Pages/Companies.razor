@@ -1,0 +1,69 @@
+﻿@page "/companies"
+@using ActivationReport.Components
+@using ActivationReport.Models
+@using Microsoft.EntityFrameworkCore
+
+<article>
+    <h3>Управление компаниями</h3>
+
+    @if (isEdit == false)
+    {
+        @if (companies != null && companies.Count > 0)
+        {
+            @foreach (var comp in companies)
+            {
+                <div class="row justify-content-between mb-2 mx-1">
+                    <div class="col-7 me-5 fs-5">@comp.Name</div>                    
+                    <button class="btn btn-outline-success col-2 me-1" @onclick="() => {eCompany = comp; isEdit = true;}">Редактировать</button>
+                    <button class="btn btn-danger col-2" @onclick="() => deleteCompany(comp)">Удалить</button>                    
+                </div>
+            }
+        } 
+        else
+        {
+            <div class="row">Нет данных по компаниям</div>           
+        }
+        <div class="row justify-content-between mx-1">
+            <button class="btn btn-outline-primary col-3" @onclick="loadData">Обновить данные</button>
+            <button class="btn btn-primary col-3" @onclick="() => isEdit = true">Создать новую компанию</button>
+        </div>        
+    } 
+    else
+    {
+        <EditCompany @bind-Edit="isEdit" @bind-ECompany="eCompany" />
+    }
+</article>
+
+
+@code {
+    private bool isEdit = false;
+    private Company eCompany = new Company
+        {
+            Cards = new List<Card>()
+        };
+
+    private List<Company> companies;
+
+    private void loadData()
+    {           
+        using (var db = new AppDBContext())
+        {
+            companies = db.Companies.Include(company => company.Cards).ToList();
+        }
+    }
+
+    private void deleteCompany(Company company)
+    {
+        using (var db = new AppDBContext())
+        {
+            db.Companies.Remove(company);
+            db.SaveChanges();
+            loadData();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        loadData();
+    }
+}
