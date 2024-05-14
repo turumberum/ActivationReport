@@ -1,7 +1,84 @@
 ﻿@page "/single"
+@using ActivationReport.Models
+@using CommunityToolkit.Maui.Storage
+@using Microsoft.EntityFrameworkCore
 
-<h3>SingleReport</h3>
+<article>
+    <h3>Отчёт по компании</h3>
+
+    <div>Список компаний:</div>
+    @if (companies != null || companies?.Count == 0)
+    {
+        <form class="align-items-start">
+            @foreach (var comp in companies)
+            {   
+                <label class="d-block fw-bold">
+                    <input type="radio" @bind="@comp.Id" id="@comp.Id" name="company" />
+                   @comp.Name
+                </label>              
+            }
+        </form>  
+    }
+    else
+    {
+        <p>Нет компаний в базе данных</p>
+    }
+
+    <div class="row justify-content-around mb-2">
+        <div class="col-4">
+            <label>Дата начала отчёта:</label>
+            <input type="date" @bind="startDate" />
+        </div>
+        <div class="col-4">
+            <label>Дата окончания отчёта:</label>
+            <input type="date" @bind="finishDate" />
+        </div>
+    </div>
+
+    <div class="row mb-2 align-items-center">
+        <button class="btn btn-primary col-3" @onclick="() => PickFolder_Clicked()">Выбор папки для отчёта</button>
+        @if (folderPath != null)
+        {
+            <label class="col-7">@folderPath</label>
+        }
+    </div>
+    
+
+    <div class="row justify-content-end">
+        <button class="btn btn-success col-3">Сформировать отчёт</button>
+    </div>
+
+
+</article>
+
+
 
 @code {
+    private List<Company>? companies;
+    private DateTime startDate = DateTime.Today;
+    private DateTime finishDate = DateTime.Today;
+    private string? folderPath;
 
+    private void loadData()
+    {
+        using (var db = new AppDBContext())
+        {
+            companies = db.Companies.Include(company => company.Cards).ToList();
+        }
+    }
+
+    private async void PickFolder_Clicked()
+    {
+        CancellationTokenSource source = new();
+        CancellationToken token = source.Token;
+        var result = await FolderPicker.Default.PickAsync(token);
+
+        if (result.IsSuccessful)
+        {
+            folderPath = result.Folder.Path; // SaveLocation is a textbox in my XAML file
+        }
+    }
+
+    protected override async Task OnInitializedAsync() => loadData();
 }
+
