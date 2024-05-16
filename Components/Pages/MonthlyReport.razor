@@ -1,5 +1,147 @@
 ﻿@page "/"
+@using ActivationReport.Models
+@using CommunityToolkit.Maui.Storage
+@using Microsoft.EntityFrameworkCore
+@using System.Text
 
-<h1>Hello, world!</h1>
+<article>
+    <h3>Ежемесячные отчёты по активации блоков СКЗИ</h3>
 
-Welcome to your new app.
+    <div>Список компаний:</div>
+    @if (companies != null || companies?.Count == 0)
+    {
+        <div class="align-items-start">
+            @foreach (var comp in companies)
+            {
+                <label class="d-block fw-bold">
+                    @comp.Name
+                </label>
+            }
+        </div>
+    }
+    else
+    {
+        <p>Нет компаний в базе данных</p>
+    }
+
+    <div class="row mb-2">
+        <div class="col-4">
+            <label>Месяц отчёта </label>
+            <input type="month" @bind="month" />
+        </div>
+    </div>
+
+    <div class="row mb-2">
+        <button class="btn btn-primary col-3" @onclick="PickFolder_Clicked">Выбор папки для отчётов</button>
+        @if (folderPath != null)
+        {
+            <label class="col-7">@folderPath</label>
+        }
+    </div>   
+    
+    <p class="row mb-2 justify-content-between">
+        <input type="checkbox" id=month class="btn-check col-4" @bind="monthly" />
+        <label for="month" class="btn btn-outline-warning col-4">Создавать папку с названием месяца</label>
+
+        @if (folderPath != null)
+        {
+            <button class="btn btn-outline-primary col-3 me-2" @onclick=@(() => System.Diagnostics.Process.Start("explorer.exe", folderPath))>Открыть папку с отчётами</button>
+        }
+    </p>   
+    
+    @if (folderPath != null && companies != null && companies.Count > 0)
+    {
+        <div class="row justify-content-end">
+            <button class="btn btn-success col-3 me-2" @onclick="createReports">Сформировать отчёт</button>
+        </div>
+    }    
+</article>
+
+@code
+{
+    private List<Company> companies;
+    private DateTime month = DateTime.Now;
+    private string folderPath;
+    private bool monthly = true;
+
+    private void loadData()
+    {
+        using (var db = new AppDBContext())
+        {
+            companies = db.Companies.Include(company => company.Cards).ToList();
+        }
+    }
+
+    private async Task PickFolder_Clicked()
+    {
+        CancellationTokenSource source = new();
+        CancellationToken token = source.Token;
+        var result = await FolderPicker.Default.PickAsync(token);
+
+        if (result.IsSuccessful)
+        {
+            folderPath = result.Folder.Path; // SaveLocation is a textbox in my XAML file
+        }
+    }
+
+    private void createReports()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        string pathToFile = folderPath + "\\" + (monthly ? month.ToString("yy_MM") + "\\" : "");
+        if (monthly && !Directory.Exists(pathToFile))
+        {
+            Directory.CreateDirectory(pathToFile);
+        }
+        else
+        {
+            Application.Current.MainPage.DisplayAlert("Ошибка", "Директория этого месяца уже существует!", "Ок");
+            return;
+        }
+
+        foreach(var comp in companies)
+        {
+            int count = 0;            
+            string fullPath = pathToFile + month.ToString("yy_MM") + "_" + comp.Name + ".csv";
+
+            using (var csvWriter = new StreamWriter(new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.Read), Encoding.GetEncoding(1251)))
+            {
+                csvWriter.WriteLine("\"Карта мастерской\";\"Дата запроса\";\"Дата ответа\";\"Наименование организации\";\"ОГРН\";\"ИНН\";\"Код региона по классификатору\";\"Населённый пункт\";\"Адрес\";\"Марка\";\"Модель\";\"Год выпуска\";\"Цвет\";\"Регистрационный номер\";\"VIN\";\"ПТС\";\"Серийный номер СКЗИ\";\"Серийный номер тахографа\";");
+                using(var db = new AppDBContext())
+                {
+                    foreach (var card in comp.Cards)
+                    {
+                        List<Activation> list;
+                        if (comp.Staff)
+                        {
+                            list = db.Activations
+                                .Where(a => a.ActDate.Year == month.Year && a.ActDate.Month == month.Month)
+                                .Where(a => a.CardNumber.Substring(1,16) == card.CardNumber).ToList();
+                        }
+                        else
+                        {
+                            list = db.Activations
+                                .Where(a => a.ActDate.Year == month.Year && a.ActDate.Month == month.Month)
+                                .Where(a => a.CompanyId == Convert.ToInt32(card.CardNumber.Substring(3, 10))).ToList();                            
+                        } 
+                        foreach (var line in list)
+                        {
+                            csvWriter.WriteLine(line.ToString());
+                        }
+
+                        count += list.Count();
+                    }
+                }                
+            }
+            File.Move(fullPath, fullPath.Replace(".csv", "_" + count + ".csv"));
+            count = 0;
+        }
+        Application.Current.MainPage.DisplayAlert("Уведомление", "Отчёты успешно сформированы!", "Ок");
+    }
+
+    private void openFolder()
+    {
+        System.Diagnostics.Process.Start("explorer.exe", folderPath);
+    }
+
+    protected override async Task OnInitializedAsync() => loadData();
+}

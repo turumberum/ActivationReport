@@ -2,6 +2,7 @@
 @using ActivationReport.Models
 @using CommunityToolkit.Maui.Storage
 @using Microsoft.EntityFrameworkCore
+@using System.Text
 
 <article>
     <h3>Отчёт по компании</h3>
@@ -11,9 +12,9 @@
     {
         <form class="align-items-start">
             @foreach (var comp in companies)
-            {   
+            {
                 <label class="d-block fw-bold">
-                    <input type="radio" @bind="@comp.Id" id="@comp.Id" name="company" />
+                    <input type="radio" @onclick="@(() => selectedCompany = comp)" id="@comp.Id" name="company" />
                    @comp.Name
                 </label>              
             }
@@ -43,21 +44,28 @@
         }
     </div>
     
+    @if (folderPath != null)
+    {
+        <div class="row">
+            <button class="btn btn-outline-primary col-3" @onclick=@(() => System.Diagnostics.Process.Start("explorer.exe", folderPath))>Открыть папку с отчётами</button>
+        </div>
+    }
 
-    <div class="row justify-content-end">
-        <button class="btn btn-success col-3">Сформировать отчёт</button>
-    </div>
-
-
+    @if (selectedCompany != null && folderPath != null)
+    {
+        <div class="row justify-content-end">
+            <button class="btn btn-success col-3" @onclick="createReport">Сформировать отчёт</button>
+        </div>
+    }
+    
 </article>
-
-
 
 @code {
     private List<Company>? companies;
     private DateTime startDate = DateTime.Today;
     private DateTime finishDate = DateTime.Today;
     private string? folderPath;
+    private Company selectedCompany = null;
 
     private void loadData()
     {
@@ -67,7 +75,7 @@
         }
     }
 
-    private async void PickFolder_Clicked()
+    private async Task PickFolder_Clicked()
     {
         CancellationTokenSource source = new();
         CancellationToken token = source.Token;
@@ -77,6 +85,56 @@
         {
             folderPath = result.Folder.Path; // SaveLocation is a textbox in my XAML file
         }
+    }
+
+    private void createReport()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        string fullPath = folderPath + "\\" + selectedCompany.Name + ".csv";
+        int count = 0;  
+
+        using (var csvWriter = new StreamWriter(new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.Read), Encoding.GetEncoding(1251)))
+        {
+            csvWriter.WriteLine("\"Карта мастерской\";\"Дата запроса\";\"Дата ответа\";\"Наименование организации\";\"ОГРН\";\"ИНН\";\"Код региона по классификатору\";\"Населённый пункт\";\"Адрес\";\"Марка\";\"Модель\";\"Год выпуска\";\"Цвет\";\"Регистрационный номер\";\"VIN\";\"ПТС\";\"Серийный номер СКЗИ\";\"Серийный номер тахографа\";");
+            using(var db = new AppDBContext())
+            {
+                foreach (var card in selectedCompany.Cards)
+                {
+                    List<Activation> list;
+                    if (selectedCompany.Staff)
+                    {
+                        list = db.Activations
+                            .Where(a => a.ActDate >= startDate.ToUniversalTime() && a.ActDate <= finishDate.AddDays(1.0).ToUniversalTime())
+                            .Where(a => a.CardNumber.Substring(1,16) == card.CardNumber).ToList();
+
+                    }
+                    else
+                    {
+                        list = db.Activations
+                            .Where(a => a.ActDate >= startDate.ToUniversalTime() && a.ActDate <= finishDate.AddDays(1.0).ToUniversalTime())
+                            .Where(a => a.CompanyId == Convert.ToInt32(card.CardNumber.Substring(3, 10))).ToList();
+
+                    }  
+
+                    foreach (var line in list)
+                    {
+                        csvWriter.WriteLine(line.ToString());
+                    }
+
+                    count += list.Count();
+                }
+            }
+            
+        }
+        try
+        {
+            File.Move(fullPath, fullPath.Replace(".csv", "_" + count + ".csv"));
+        }
+        catch (Exception e)
+        {
+            Application.Current.MainPage.DisplayAlert("Ошибка", "Ошибка переименования файла!", "Ок");
+        }
+        Application.Current.MainPage.DisplayAlert("Уведомление", "Отчёт успешно сформирован!", "Ок");
     }
 
     protected override async Task OnInitializedAsync() => loadData();
