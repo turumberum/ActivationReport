@@ -1,7 +1,8 @@
 ﻿@using ActivationReport.Models
+@using System.ComponentModel.DataAnnotations
 
-<article> 
-    @if (ECompany.Cards.Count() > 0)
+<article>
+    @if (ECompany.Id > 1)
     {
         <h4>Редактирование данных компании</h4>
     } 
@@ -10,49 +11,47 @@
         <h4>Создание новой компании</h4>
     }
     
-    <div class="row mb-2">
-        <span class="col-2">Название компании</span>
-        <input @bind="ECompany.Name" class="col-8 " type="text" />
-    </div>
-    <div class="row mb-2">   
-        <span class="col-2">Трудоустроен к нам</span>
-        <input @bind="ECompany.Staff" class="col-1" type="checkbox" />
-    </div>
-    <div class="row mb-2">
-        <span class="col-2">Ежемесячный отчёт</span>
-        <input @bind="ECompany.MonthlyReport" class="col-1" type="checkbox" />
-    </div>
-    <div class="row mb-2">
-        @if (ECompany.Cards != null && ECompany.Cards.Count > 0)
-        {
-            <div>Список карт:</div>
-            @foreach (var card in ECompany.Cards)
+    <EditForm Model="@ECompany" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+       
+        <p class="row">
+            <label class="col-2">Название компании</label>
+            <InputText @bind-Value="ECompany.Name" class="col-8"/>
+        </p>
+        <p class="row">   
+            <label class="col-2">Трудоустроен к нам</label>
+            <InputCheckbox @bind-Value="ECompany.Staff" class="col-1" />
+        </p>
+        <p class="row">
+            <label class="col-2">Ежемесячный отчёт</label>
+            <InputCheckbox @bind-Value="ECompany.MonthlyReport" class="col-1" />
+        </p>
+        <p class="row">
+            @if (ECompany.Cards != null && ECompany.Cards.Count > 0)
             {
-                <div class="mb-2">
-                    <input class="col-3" @bind="@card.CardNumber" />
-                    <button class="btn btn-close col-1" @onclick="() => ECompany.Cards.Remove(card)"/>
-                </div>                
+                <p>Список карт:</p>
+                @foreach (var card in ECompany.Cards)
+                {
+                    <p>
+                        <InputText class="col-3" @bind-Value="@card.CardNumber"/>
+                        <button type="button" class="btn btn-close col-1" @onclick="() => ECompany.Cards.Remove(card)" />
+                    </p>
+                }    
             }
-        }
-        else
-        {
-            <div>Карты не указаны</div>
-        }
-        <button class="btn btn-outline-success col-3 ms-2" @onclick="() => ECompany.Cards.Add(new Card())">Добавить новую карту</button>
-    </div>    
+            else
+            {
+                <p>Карты не указаны</p>
+            }
 
+        <button type="button" class="btn btn-outline-success col-3 ms-2" @onclick="() => ECompany.Cards.Add(new Card())">Добавить новую карту</button>
+        </p>
 
-    <div class="row justify-content-end">
-        @if (ECompany.Cards.Count() > 0)
-        {
-            <button class="btn btn-primary col-3 me-2" @onclick="updateCompany">Обновить данные</button>            
-        } 
-        else
-        {
-            <button class="btn btn-primary col-3 me-2" @onclick="saveCompany">Сохранить изменения</button>
-        }
-        <button class="btn btn-danger col-2 me-2" @onclick="cancelled">Отмена</button>
-    </div>
+        <ValidationSummary />
+        <p class="row justify-content-end">
+            <button type="submit" class="btn btn-primary col-3 me-2">Сохранить изменения</button>
+            <button class="btn btn-danger col-2 me-2" @onclick="cancelled">Отмена</button>
+        </p>
+    </EditForm>
 </article>
 
 
@@ -61,11 +60,12 @@
     public bool Edit { get; set; }
     [Parameter]
     public EventCallback<bool> EditChanged { get; set; }
-
     [Parameter]
     public Company ECompany { get; set; }
     [Parameter]
     public EventCallback<Company> ECompanyChanged { get; set; }
+
+    private List<string> validationMessages = new List<string>();
 
     private async Task cancelled()
     {
@@ -76,7 +76,7 @@
         await EditChanged.InvokeAsync(false);
     }
 
-    public void saveCompany()
+    private void saveCompany()
     {
         using (var db = new AppDBContext())
         {
@@ -86,7 +86,7 @@
         cancelled();
     }
 
-    public void updateCompany()
+    private void updateCompany()
     {
         using (var db = new AppDBContext())
         {
@@ -94,5 +94,42 @@
             db.SaveChanges();
         }
         cancelled();
+    }
+
+    private void HandleValidSubmit()
+    {
+        var context = new ValidationContext(ECompany);
+        var validationResults = new List<ValidationResult>();
+
+        // Проверяем валидность основной модели
+        bool isValid = Validator.TryValidateObject(ECompany, context, validationResults, true);
+
+        // Проверяем валидность каждой карточки в списке
+        foreach (var card in ECompany.Cards)
+        {
+            context = new ValidationContext(card);
+            isValid &= Validator.TryValidateObject(card, context, validationResults, true);
+        }
+
+        if (isValid)
+        {
+            if (ECompany.Id > 1)
+            {
+                updateCompany();
+            }
+            else
+            {
+                saveCompany();
+            }
+        }
+        else
+        {
+            // Обновляем сообщения валидации
+            validationMessages.Clear();
+            foreach (var validationResult in validationResults)
+            {
+                validationMessages.Add(validationResult.ErrorMessage);
+            }
+        }
     }
 }

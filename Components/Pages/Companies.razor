@@ -10,12 +10,12 @@
     {
         @if (companies != null && companies.Count > 0)
         {
-            @foreach (var comp in companies)
+            @foreach (var comp in companies.OrderBy(c => c.Name).ToList())
             {
-                <div class="row justify-content-between mb-2 mx-1">
-                    <div class="col-7 me-5 fs-5">@comp.Name</div>                    
+                <div class="me-1 mb-1">                                      
                     <button class="btn btn-outline-success col-2 me-1" @onclick="() => {eCompany = comp; isEdit = true;}">Редактировать</button>
-                    <button class="btn btn-danger col-2" @onclick="() => deleteCompany(comp)">Удалить</button>                    
+                    <button class="btn btn-danger col-1" @onclick="() => deleteCompany(comp)">Удалить</button>
+                    <span class="ms-5 fs-5">@comp.Name</span>
                 </div>
             }
         } 
@@ -23,10 +23,10 @@
         {
             <div class="row">Нет данных по компаниям</div>           
         }
-        <div class="row justify-content-between mx-1">
+        <p class="row justify-content-between mx-1">
             <button class="btn btn-outline-primary col-3" @onclick="loadData">Обновить данные</button>
             <button class="btn btn-primary col-3" @onclick="() => isEdit = true">Создать новую компанию</button>
-        </div>        
+        </p>        
     } 
     else
     {

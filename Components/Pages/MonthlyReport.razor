@@ -7,53 +7,53 @@
 <article>
     <h3>Ежемесячные отчёты по активации блоков СКЗИ</h3>
 
-    <div>Список компаний:</div>
+    <p>Список компаний:</p>
     @if (companies != null || companies?.Count == 0)
     {
-        <div class="align-items-start">
+        <p class="align-items-start">
             @foreach (var comp in companies)
             {
                 <label class="d-block fw-bold">
                     @comp.Name
                 </label>
             }
-        </div>
+        </p>
     }
     else
     {
         <p>Нет компаний в базе данных</p>
     }
 
-    <div class="row mb-2">
+    <p class="row">
         <div class="col-4">
-            <label>Месяц отчёта </label>
+            <label class="me-2">Месяц отчёта</label>
             <input type="month" @bind="month" />
         </div>
-    </div>
+    </p>
 
-    <div class="row mb-2">
+    <p class="row align-items-center">
         <button class="btn btn-primary col-3" @onclick="PickFolder_Clicked">Выбор папки для отчётов</button>
         @if (folderPath != null)
         {
             <label class="col-7">@folderPath</label>
         }
-    </div>   
+    </p>   
     
-    <p class="row mb-2 justify-content-between">
-        <input type="checkbox" id=month class="btn-check col-4" @bind="monthly" />
+    <p class="row justify-content-between">
+        <input type="checkbox" id=month class="btn-check col-4" @bind="monthly" @onclick="changeMonthlyFolder" />
         <label for="month" class="btn btn-outline-warning col-4">Создавать папку с названием месяца</label>
 
-        @if (folderPath != null)
+        @if (!folderPath.Equals(""))
         {
             <button class="btn btn-outline-primary col-3 me-2" @onclick=@(() => System.Diagnostics.Process.Start("explorer.exe", folderPath))>Открыть папку с отчётами</button>
         }
     </p>   
     
-    @if (folderPath != null && companies != null && companies.Count > 0)
+    @if (!folderPath.Equals("") && companies != null && companies.Count > 0)
     {
-        <div class="row justify-content-end">
+        <p class="row justify-content-end">
             <button class="btn btn-success col-3 me-2" @onclick="createReports">Сформировать отчёт</button>
-        </div>
+        </p>
     }    
 </article>
 
@@ -61,8 +61,8 @@
 {
     private List<Company> companies;
     private DateTime month = DateTime.Now;
-    private string folderPath;
-    private bool monthly = true;
+    private string folderPath = Preferences.Default.Get("MonthlyFolder", "");
+    private bool monthly = Preferences.Default.Get("CreateMonthlyFolder", false);
 
     private void loadData()
     {
@@ -72,6 +72,11 @@
         }
     }
 
+    private void changeMonthlyFolder()
+    {
+        monthly = !monthly;
+        Preferences.Default.Set("CreateMonthlyFolder", monthly);
+    }
     private async Task PickFolder_Clicked()
     {
         CancellationTokenSource source = new();
@@ -82,6 +87,8 @@
         {
             folderPath = result.Folder.Path; // SaveLocation is a textbox in my XAML file
         }
+
+        Preferences.Default.Set("MonthlyFolder", folderPath);
     }
 
     private void createReports()

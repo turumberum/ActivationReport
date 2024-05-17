@@ -7,25 +7,27 @@
 <article>
     <h3>Отчёт по компании</h3>
 
-    <div>Список компаний:</div>
+    <p>Список компаний:</p>
     @if (companies != null || companies?.Count == 0)
     {
-        <form class="align-items-start">
+        <p class="align-items-start">
             @foreach (var comp in companies)
             {
-                <label class="d-block fw-bold">
-                    <input type="radio" @onclick="@(() => selectedCompany = comp)" id="@comp.Id" name="company" />
-                   @comp.Name
-                </label>              
+                <div>
+                    <label class="d-block fw-bold">
+                        <input type="radio" @onclick="@(() => selectedCompany = comp)" id="@comp.Id" name="company" />
+                        @comp.Name
+                    </label>
+                </div>                           
             }
-        </form>  
+        </p>  
     }
     else
     {
         <p>Нет компаний в базе данных</p>
     }
 
-    <div class="row justify-content-around mb-2">
+    <p class="row justify-content-around">
         <div class="col-4">
             <label>Дата начала отчёта:</label>
             <input type="date" @bind="startDate" />
@@ -34,37 +36,36 @@
             <label>Дата окончания отчёта:</label>
             <input type="date" @bind="finishDate" />
         </div>
-    </div>
+    </p>
 
-    <div class="row mb-2 align-items-center">
+    <p class="row align-items-center">
         <button class="btn btn-primary col-3" @onclick="() => PickFolder_Clicked()">Выбор папки для отчёта</button>
         @if (folderPath != null)
         {
             <label class="col-7">@folderPath</label>
         }
-    </div>
+    </p>
     
-    @if (folderPath != null)
+    @if (!folderPath.Equals(""))
     {
-        <div class="row">
+        <p class="row">
             <button class="btn btn-outline-primary col-3" @onclick=@(() => System.Diagnostics.Process.Start("explorer.exe", folderPath))>Открыть папку с отчётами</button>
-        </div>
+        </p>
     }
 
-    @if (selectedCompany != null && folderPath != null)
+    @if (selectedCompany != null && !folderPath.Equals(""))
     {
-        <div class="row justify-content-end">
+        <p class="row justify-content-end">
             <button class="btn btn-success col-3" @onclick="createReport">Сформировать отчёт</button>
-        </div>
-    }
-    
+        </p>
+    }    
 </article>
 
 @code {
     private List<Company>? companies;
     private DateTime startDate = DateTime.Today;
     private DateTime finishDate = DateTime.Today;
-    private string? folderPath;
+    private string folderPath = Preferences.Default.Get("SingleFolder", "");
     private Company selectedCompany = null;
 
     private void loadData()
@@ -85,6 +86,8 @@
         {
             folderPath = result.Folder.Path; // SaveLocation is a textbox in my XAML file
         }
+
+        Preferences.Default.Set("SingleFolder", folderPath);
     }
 
     private void createReport()
