@@ -43,7 +43,7 @@
                 <p>Карты не указаны</p>
             }
 
-        <button type="button" class="btn btn-outline-success col-3 ms-2" @onclick="() => ECompany.Cards.Add(new Card())">Добавить новую карту</button>
+            <button type="button" class="btn btn-outline-success col-3 ms-2" @onclick="() => ECompany.Cards.Add(new Card())">Добавить новую карту</button>
         </p>
 
         <ValidationSummary />
@@ -76,24 +76,24 @@
         await EditChanged.InvokeAsync(false);
     }
 
-    private void saveCompany()
+    private async void saveCompany()
     {
         using (var db = new AppDBContext())
         {
             db.Companies.Add(ECompany);
             db.SaveChanges();
         }
-        cancelled();
+        await cancelled();
     }
 
-    private void updateCompany()
+    private async void updateCompany()
     {
         using (var db = new AppDBContext())
         {
             db.Companies.Update(ECompany);
             db.SaveChanges();
         }
-        cancelled();
+        await cancelled();
     }
 
     private void HandleValidSubmit()

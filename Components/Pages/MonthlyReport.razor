@@ -1,6 +1,5 @@
 ﻿@page "/"
 @using ActivationReport.Models
-@using CommunityToolkit.Maui.Storage
 @using Microsoft.EntityFrameworkCore
 @using System.Text
 
@@ -25,14 +24,12 @@
     }
 
     <p class="row">
-        <div class="col-4">
-            <label class="me-2">Месяц отчёта</label>
-            <input type="month" @bind="month" />
-        </div>
+        <label class="col-2">Месяц отчёта</label>
+        <input class="col-2" type="month" @bind="month" />
     </p>
 
     <p class="row align-items-center">
-        <button class="btn btn-primary col-3" @onclick="PickFolder_Clicked">Выбор папки для отчётов</button>
+        <button class="btn btn-primary col-3" @onclick="pickFolder">Выбор папки для отчётов</button>
         @if (folderPath != null)
         {
             <label class="col-7">@folderPath</label>
@@ -45,7 +42,7 @@
 
         @if (!folderPath.Equals(""))
         {
-            <button class="btn btn-outline-primary col-3 me-2" @onclick=@(() => System.Diagnostics.Process.Start("explorer.exe", folderPath))>Открыть папку с отчётами</button>
+            <button class="btn btn-outline-primary col-3 me-2" @onclick="() => global::Helpers.OpenFolder(folderPath)">Открыть папку с отчётами</button>
         }
     </p>   
     
@@ -59,37 +56,18 @@
 
 @code
 {
-    private List<Company> companies;
+    private List<Company>? companies;
     private DateTime month = DateTime.Now;
-    private string folderPath = Preferences.Default.Get("MonthlyFolder", "");
+    private string? folderPath = Preferences.Default.Get("MonthlyFolder", "");
     private bool monthly = Preferences.Default.Get("CreateMonthlyFolder", false);
-
-    private void loadData()
-    {
-        using (var db = new AppDBContext())
-        {
-            companies = db.Companies.Include(company => company.Cards).ToList();
-        }
-    }
 
     private void changeMonthlyFolder()
     {
         monthly = !monthly;
         Preferences.Default.Set("CreateMonthlyFolder", monthly);
     }
-    private async Task PickFolder_Clicked()
-    {
-        CancellationTokenSource source = new();
-        CancellationToken token = source.Token;
-        var result = await FolderPicker.Default.PickAsync(token);
 
-        if (result.IsSuccessful)
-        {
-            folderPath = result.Folder.Path; // SaveLocation is a textbox in my XAML file
-        }
-
-        Preferences.Default.Set("MonthlyFolder", folderPath);
-    }
+    private async Task pickFolder() => folderPath = await Helpers.PickFolder("MonthlyFolder");
 
     private void createReports()
     {
@@ -145,10 +123,5 @@
         Application.Current.MainPage.DisplayAlert("Уведомление", "Отчёты успешно сформированы!", "Ок");
     }
 
-    private void openFolder()
-    {
-        System.Diagnostics.Process.Start("explorer.exe", folderPath);
-    }
-
-    protected override async Task OnInitializedAsync() => loadData();
+    protected override async Task OnInitializedAsync() => companies = Helpers.LoadCompaniesData();
 }
