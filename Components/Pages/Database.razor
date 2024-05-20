@@ -100,7 +100,6 @@
                             {
                                 separateRow[i] = separateRow[i] + ";" + separateRow[i + 1];
                                 separateRow[i + 1] = "";
-                                //i++;
                             }
                         }
                         separateRow = separateRow.Where(s => !string.IsNullOrEmpty(s)).ToArray();
@@ -140,8 +139,6 @@
 
                         if (!listDB.Exists(x => x.CryptoBlock == newAct.CryptoBlock))
                         {
-
-                            //var test = listDB.Exists(x => x == newAct);
                             list.Add(newAct);
                             count++;
                             totalCount++;

@@ -45,11 +45,8 @@
     private List<Company> companies;
 
     private void loadData()
-    {           
-        using (var db = new AppDBContext())
-        {
-            companies = db.Companies.Include(company => company.Cards).ToList();
-        }
+    {
+        companies = Helpers.LoadCompaniesData();
     }
 
     private void deleteCompany(Company company)
