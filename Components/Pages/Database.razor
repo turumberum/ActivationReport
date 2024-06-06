@@ -81,7 +81,8 @@
         {
             using (var db = new AppDBContext())
             {
-                var listDB = db.Activations.ToList();
+                var listDB = db.Activations.Select(t => t.CryptoBlock).ToList();
+
                 csvReader.ReadLine();   //skip first line
                 while ((row = csvReader.ReadLine()) != null && !row.Substring(0, 1).Equals(";"))
                 {
@@ -137,7 +138,8 @@
                                 TachoNumber = separateRow[18]
                             };
 
-                        if (!listDB.Exists(x => x.CryptoBlock == newAct.CryptoBlock))
+                        //if (!listDB.Exists(x => x.Equals(newAct.CryptoBlock.ToString())))
+                        if (!listDB.Contains(separateRow[17]))
                         {
                             list.Add(newAct);
                             count++;
@@ -153,7 +155,7 @@
                         count = 0;
                     } 
                 }
-                if (count < 100)
+                if (count > 0)
                 {
                     db.Activations.AddRange(list);
                     db.SaveChanges();

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 internal static class Helpers
 {
-
     public static List<Company> LoadCompaniesData()
     {
         using (var db = new AppDBContext())
