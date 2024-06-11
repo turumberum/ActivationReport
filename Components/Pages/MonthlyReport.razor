@@ -12,6 +12,7 @@
         <p class="align-items-start">
             @foreach (var comp in companies)
             {
+
                 <label class="d-block fw-bold">
                     @comp.Name
                 </label>
@@ -123,5 +124,5 @@
         Application.Current.MainPage.DisplayAlert("Уведомление", "Отчёты успешно сформированы!", "Ок");
     }
 
-    protected override async Task OnInitializedAsync() => companies = Helpers.LoadCompaniesData();
+    protected override async Task OnInitializedAsync() => companies = Helpers.LoadCompaniesData(true);
 }

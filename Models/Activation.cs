@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace ActivationReport.Models
+﻿namespace ActivationReport.Models
 {
     public class Activation
     {

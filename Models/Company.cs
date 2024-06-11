@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ActivationReport.Models
 {
-    public class Company
+    public class Company : IValidatableObject
     {
         public int Id { get; set; }
 
@@ -11,16 +11,35 @@ namespace ActivationReport.Models
         [StringLength(50, MinimumLength = 2, ErrorMessage = "Название компании должно быть менее 2 символов")]
         public string? Name { get; set; }
         public bool Staff { get; set; }
-        public bool MonthlyReport {  get; set; }
+        public bool MonthlyReport { get; set; }
 
         [Required(ErrorMessage = "Необходимо добавить хотя бы одну карту")]
         [MinCollectionCount(1, ErrorMessage = "Необходимо добавить хотя бы одну карту")]
-        [ValidateComplexType]
         public required List<Card> Cards { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            var results = new List<ValidationResult>();
+
+            int requiredLength = Staff ? 16 : 13;
+            foreach (var card in Cards)
+            {
+                if (card.CardNumber == null || card.CardNumber.Length != requiredLength)
+                {
+                    string errorMessage = Staff
+                        ? "Номер карты должен быть 16 символов"
+                        : "Номер карты должен быть 13 символов";
+                    results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+                }
+            }
+
+            return results;
+        }
     }
-}
+};
 
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+
 public class MinCollectionCountAttribute : ValidationAttribute
 {
     private readonly int _minCount;

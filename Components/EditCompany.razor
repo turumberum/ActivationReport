@@ -69,11 +69,19 @@
 
     private async Task cancelled()
     {
+        clearEmptyCard(ECompany);
         await ECompanyChanged.InvokeAsync(new Company
                                                     {
                                                         Cards = new List<Card>()
                                                     });
         await EditChanged.InvokeAsync(false);
+    }
+
+    private Company clearEmptyCard(Company company)
+    {
+        company.Cards.RemoveAll(card => card.CardNumber == null);
+        company.Cards.RemoveAll(card => card.CardNumber.Equals(""));
+        return company;
     }
 
     private async void saveCompany()

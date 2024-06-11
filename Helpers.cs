@@ -5,11 +5,18 @@ using Microsoft.EntityFrameworkCore;
 
 internal static class Helpers
 {
-    public static List<Company> LoadCompaniesData()
+    public static List<Company> LoadCompaniesData(bool report = false)
     {
         using (var db = new AppDBContext())
         {
-            return db.Companies.Include(company => company.Cards).ToList();
+            if (report)
+            {
+                return db.Companies.Where(c => c.MonthlyReport == true).Include(company => company.Cards).ToList();
+            }
+            else
+            {
+                return db.Companies.Include(company => company.Cards).ToList();
+            }            
         }
     }
     public static void OpenFolder(string path) => System.Diagnostics.Process.Start("explorer.exe", path);
