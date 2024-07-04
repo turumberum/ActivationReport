@@ -10,7 +10,7 @@
     @if (companies != null || companies?.Count == 0)
     {
         <p class="align-items-start">
-            @foreach (var comp in companies)
+            @foreach (var comp in companies.OrderBy(c => c.Name).ToList())
             {
                 <div>
                     <label class="d-block fw-bold">
@@ -86,7 +86,8 @@
                     if (selectedCompany.Staff)
                     {
                         list = db.Activations.Where(a => a.ActDate >= startDate.ToUniversalTime() && a.ActDate <= finishDate.AddDays(1.0).ToUniversalTime())
-                                             .Where(a => a.CardNumber.Substring(1,16) == card.CardNumber).ToList();
+                                             //Where(a => a.CardNumber.Substring(1,16) == card.CardNumber).ToList();
+                                             .Where(a => a.CardNumber.Substring(1, 14) == card.CardNumber.Substring(0, 14)).ToList();
                     }
                     else
                     {
