@@ -12,10 +12,22 @@
         {
             @foreach (var comp in companies.OrderBy(c => c.Name).ToList())
             {
-                <div class="me-1 mb-1">                                      
+                <div class="me-1 mb-1">
                     <button class="btn btn-outline-success col-2 me-1" @onclick="() => {eCompany = comp; isEdit = true;}">Редактировать</button>
                     <button class="btn btn-danger col-1" @onclick="() => deleteCompany(comp)">Удалить</button>
-                    <span class="ms-5 fs-5">@comp.Name</span>
+                    <span>
+                        <label class="mx-5 fs-5 col-3">@comp.Name</label>
+                        @if (comp.MonthlyReport)
+                        {
+                            <button class="btn btn-warning me-1 col-2" disabled>Ежемесячный</button>
+                        } else {
+                            <label class="col-2 me-1"></label>
+                        }
+                        @if (comp.Staff)
+                        {
+                            <button class="btn btn-info col-2" disabled>Сотрудник</button>
+                        }
+                    </span>                    
                 </div>
             }
         } 
