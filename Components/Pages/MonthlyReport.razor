@@ -29,30 +29,24 @@
         <input class="col-2" type="month" @bind="month" />
     </p>
 
-    <p class="row align-items-center">
+    <p class="row align-items-center justify-content-center">
         <button class="btn btn-primary col-3" @onclick="pickFolder">Выбор папки для отчётов</button>
         @if (folderPath != null)
         {
-            <label class="col-7">@folderPath</label>
+            <label class="col-6">@folderPath</label>
+            <button class="btn btn-outline-primary col-3" @onclick="() => global::Helpers.OpenFolder(folderPath)">Открыть папку с отчётами</button>
         }
     </p>   
-    
+
     <p class="row justify-content-between">
         <input type="checkbox" id=month class="btn-check col-4" @bind="monthly" @onclick="changeMonthlyFolder" />
         <label for="month" class="btn btn-outline-warning col-4">Создавать папку с названием месяца</label>
 
-        @if (!folderPath.Equals(""))
+        @if (folderPath != null && companies != null && companies.Count > 0)
         {
-            <button class="btn btn-outline-primary col-3 me-2" @onclick="() => global::Helpers.OpenFolder(folderPath)">Открыть папку с отчётами</button>
+            <button class="btn btn-success col-3" @onclick="createReports">Сформировать отчёт</button>
         }
-    </p>   
-    
-    @if (!folderPath.Equals("") && companies != null && companies.Count > 0)
-    {
-        <p class="row justify-content-end">
-            <button class="btn btn-success col-3 me-2" @onclick="createReports">Сформировать отчёт</button>
-        </p>
-    }    
+    </p>    
 </article>
 
 @code

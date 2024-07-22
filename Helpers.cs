@@ -16,7 +16,7 @@ internal static class Helpers
             else
             {
                 return db.Companies.Include(company => company.Cards).ToList();
-            }            
+            }
         }
     }
     public static void OpenFolder(string path) => System.Diagnostics.Process.Start("explorer.exe", path);
@@ -34,10 +34,10 @@ internal static class Helpers
                 Preferences.Default.Set(optionalSaveParameter, result.Folder.Path);
             }
             return result.Folder.Path;
-        } 
-        else 
-        { 
-            return null; 
+        }
+        else
+        {
+            return null;
         }
     }
 }

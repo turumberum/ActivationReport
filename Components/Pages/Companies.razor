@@ -8,37 +8,46 @@
 
     @if (isEdit == false)
     {
+        <p class="row justify-content-between">
+            <button class="btn btn-outline-primary col-3" @onclick="loadData">Обновить данные</button>
+            <button class="btn btn-primary col-3" @onclick="() => isEdit = true">Создать новую компанию</button>
+        </p>
+
         @if (companies != null && companies.Count > 0)
         {
             @foreach (var comp in companies.OrderBy(c => c.Name).ToList())
             {
-                <div class="me-1 mb-1">
+                <p class="row">
                     <button class="btn btn-outline-success col-2 me-1" @onclick="() => {eCompany = comp; isEdit = true;}">Редактировать</button>
                     <button class="btn btn-danger col-1" @onclick="() => deleteCompany(comp)">Удалить</button>
-                    <span>
-                        <label class="mx-5 fs-5 col-3">@comp.Name</label>
+                    <div class="col-8 align-content-between">
+                        <label class="ms-1  fs-5 col-6">@comp.Name</label>
                         @if (comp.MonthlyReport)
                         {
-                            <button class="btn btn-warning me-1 col-2" disabled>Ежемесячный</button>
-                        } else {
-                            <label class="col-2 me-1"></label>
+                            @if (comp.Email != null)
+                            {
+                                <button class="btn btn-warning me-1 col-3" disabled> @@ Ежемесячный</button>
+                            } else
+                            {
+                                <button class="btn btn-warning me-1 col-3" disabled>Ежемесячный</button>
+                            }   
+                        } 
+                        else 
+                        {
+                            <label class="col-3 me-1"></label>
                         }
                         @if (comp.Staff)
                         {
                             <button class="btn btn-info col-2" disabled>Сотрудник</button>
                         }
-                    </span>                    
-                </div>
+                    </div>                    
+                </p>
             }
         } 
         else
         {
             <div class="row">Нет данных по компаниям</div>           
-        }
-        <p class="row justify-content-between mx-1">
-            <button class="btn btn-outline-primary col-3" @onclick="loadData">Обновить данные</button>
-            <button class="btn btn-primary col-3" @onclick="() => isEdit = true">Создать новую компанию</button>
-        </p>        
+        }                
     } 
     else
     {
@@ -61,14 +70,20 @@
         companies = Helpers.LoadCompaniesData();
     }
 
-    private void deleteCompany(Company company)
+    private async Task deleteCompany(Company company)
     {
-        using (var db = new AppDBContext())
+        bool result = await Application.Current.MainPage.DisplayAlert("Подтверждение действия", "Подтвердите удаление " + company.Name, "Подтвердить", "Отмена");
+
+        if (result)
         {
-            db.Companies.Remove(company);
-            db.SaveChanges();
-            loadData();
-        }
+            using (var db = new AppDBContext())
+            {
+                db.Companies.Remove(company);
+                db.SaveChanges();
+                loadData();
+            }
+            await Application.Current.MainPage.DisplayAlert("Подтверждение действия", "Компания удалена", "Ок");
+        }      
     }
 
     protected override async Task OnInitializedAsync() => loadData();

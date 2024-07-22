@@ -41,18 +41,12 @@
         <button class="btn btn-primary col-3" @onclick="pickFolder">Выбор папки для отчёта</button>
         @if (folderPath != null)
         {
-            <label class="col-7">@folderPath</label>
-        }
-    </p>
-    
-    @if (!folderPath.Equals(""))
-    {
-        <p class="row">
+            <label class="col-6">@folderPath</label>        
             <button class="btn btn-outline-primary col-3" @onclick="() => global::Helpers.OpenFolder(folderPath)">Открыть папку с отчётами</button>
-        </p>
-    }
+        }
+    </p>       
 
-    @if (selectedCompany != null && !folderPath.Equals(""))
+    @if (selectedCompany != null && folderPath != null)
     {
         <p class="row justify-content-end">
             <button class="btn btn-success col-3" @onclick="createReport">Сформировать отчёт</button>
@@ -113,6 +107,8 @@
         {
             Application.Current.MainPage.DisplayAlert("Ошибка", "Ошибка переименования файла!", "Ок");
         }
+
+        //Helpers.SendEmail(selectedCompany.Name, "225761@mail.ru", fullPath.Replace(".csv", "_" + count + ".csv"));
 
         Application.Current.MainPage.DisplayAlert("Уведомление", "Отчёт успешно сформирован!", "Ок");
     }

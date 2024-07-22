@@ -16,6 +16,11 @@
     </p>
 
     <p class="row align-items-center">
+        <label class="col-3">Запросить файл</label>
+        <button class="btn btn-outline-primary col-2" @onclick="loadFromJira">Запрос на портал</button>
+    </p>
+
+    <p class="row align-items-center">
         <label class="col-3">Файл для загрузки в базу данных</label>
         <button class="btn btn-outline-primary col-2" @onclick="selectFile">Выбрать файл</button>
         @if (filePath != null)
@@ -57,6 +62,26 @@
 
         if (response != null)
             filePath = response.FullPath;
+    }
+
+    private void loadFromJira()
+    {
+        string startDate;
+        using (var db = new AppDBContext())
+        {
+            startDate = db.Activations.OrderBy(a => a.ActDate).Last().ActDate.ToShortDateString();
+        }
+
+        if (startDate.Equals(DateTime.Today.ToShortDateString()) || startDate.Equals(DateTime.Today.AddDays(-1).ToShortDateString()))
+        {
+            Application.Current.MainPage.DisplayAlert("Уведомление", "Обновление базы не требуется", "Ок");
+        } 
+        else
+        {
+            //Application.Current.MainPage.DisplayAlert("Уведомление", "Обновляюсь", "Ок");
+            //Helpers.JiraRequest(startDate, DateTime.Today.ToShortDateString());
+        }
+        
     }
 
     private void countDatabaseEntries()

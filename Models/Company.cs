@@ -12,6 +12,7 @@ namespace ActivationReport.Models
         public string? Name { get; set; }
         public bool Staff { get; set; }
         public bool MonthlyReport { get; set; }
+        public string? Email { get; set; }
 
         [Required(ErrorMessage = "Необходимо добавить хотя бы одну карту")]
         [MinCollectionCount(1, ErrorMessage = "Необходимо добавить хотя бы одну карту")]
