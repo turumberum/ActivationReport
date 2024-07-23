@@ -1,20 +1,20 @@
 ﻿using AngleSharp;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net;
 using Microsoft.Extensions.Configuration;
 using MimeKit;
 using ActivationReport.Models;
 using MailKit.Net.Smtp;
-using Microsoft.Maui.Animations;
+using System.Text;
+using ActivationReport.Components.Pages;
 
 namespace ActivationReport
 {
     internal static class Services
     {
-        public static void SendEmail(Company company, string csvFilePath, DateTime month)
+        public static void SendEmail(Company company, string csvFilePath, DateTime? month = null)
         {
             var config = new ConfigurationBuilder()
                             .AddJsonFile("appsettings.json")
@@ -25,17 +25,17 @@ namespace ActivationReport
             message.To.Add(new MailboxAddress("Отчёт по активациям СКЗИ для " + company.Name, company.Email));
 
             if (month != null)
-            {                
-                message.Subject = $"Расширенный отчёт по активациям СКЗИ за " + month.ToString("y");
+            {
+                message.Subject = $"Расширенный отчёт по активациям СКЗИ за " + month?.ToString("y");
             }
             else
             {
                 message.Subject = $"Расширенный отчёт по активациям СКЗИ";
-            }            
+            }
 
             var bodyBuilder = new BodyBuilder { TextBody = @"Отчёт по активациям блоков СКЗИ во вложенном файле" };
 
-            using (var stream = File.OpenRead(csvFilePath))
+            using (var stream = System.IO.File.OpenRead(csvFilePath))
             {
                 bodyBuilder.Attachments.Add(Path.GetFileName(csvFilePath), stream);
             }
@@ -62,7 +62,7 @@ namespace ActivationReport
             {
                 CookieContainer = new CookieContainer()
             };
-          
+
             handler.CookieContainer.Add(new Uri("http://support.atlas-kard.ru"), new Cookie("atlassian.xsrf.token", "B9Y4-SFXY-UDJ1-SPMI|d01a1c60a20887d6d92b29ab9868b22e1465f2da|lout", "/", "support.atlas-kard.ru"));
 
             using (var client = new HttpClient(handler))
@@ -77,7 +77,7 @@ namespace ActivationReport
                 //client.DefaultRequestHeaders.Referrer = new Uri("http://support.atlas-kard.ru/jira/servicedesk/customer/portal/3/TA-520578");
                 client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
 
-                
+
                 var content = new FormUrlEncodedContent(new[]
                 {
                     new KeyValuePair<string, string>("os_username", config.GetConnectionString("os_username")),
@@ -93,12 +93,15 @@ namespace ActivationReport
 
         public static async void AtlasRequest(string startDate, string endDate)
         {
+            Database.LoadingStatus = 1;
             AtlasAuth();
+            string fullUrl = null;
+
             var handler = new HttpClientHandler
             {
                 CookieContainer = new CookieContainer()
             };
-            
+
             handler.CookieContainer.Add(new Uri("http://support.atlas-kard.ru"), new Cookie("seraph.rememberme.cookie", "796237%3A993c597d1bdd94f3c274f43b8ae6ff9557b4373c", "/", "support.atlas-kard.ru"));
             handler.CookieContainer.Add(new Uri("http://support.atlas-kard.ru"), new Cookie("atlassian.xsrf.token", "B9Y4-SFXY-UDJ1-SPMI|74446a0a93eaa639159e6e1432b0179577c48ac3|lin", "/", "support.atlas-kard.ru"));
 
@@ -113,7 +116,7 @@ namespace ActivationReport
                 client.DefaultRequestHeaders.Referrer = new Uri("http://support.atlas-kard.ru/jira/servicedesk/customer/portal/3/create/27");
                 client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
 
-               
+
                 var content = new FormUrlEncodedContent(new[]
                 {
                     new KeyValuePair<string, string>("atl_token", "B9Y4-SFXY-UDJ1-SPMI|74446a0a93eaa639159e6e1432b0179577c48ac3|lin"),
@@ -135,15 +138,25 @@ namespace ActivationReport
 
                 if (requestDetailsBaseUrl != null)
                 {
-                    var fullUrl = "http://support.atlas-kard.ru" + requestDetailsBaseUrl;
-                    Debug.WriteLine($"Navigating to: {fullUrl}");
+                    fullUrl = "http://support.atlas-kard.ru" + requestDetailsBaseUrl;
+                    Debug.WriteLine($"Create full URL: {fullUrl}");
 
                     // Send GET request to the URL
-                    var detailsResponse = await client.GetAsync(fullUrl);
-                    var detailsResponseString = await detailsResponse.Content.ReadAsStringAsync();
-                    Debug.WriteLine(detailsResponseString);
+                    //var detailsResponse = await client.GetAsync(fullUrl);
+                    //var detailsResponseString = await detailsResponse.Content.ReadAsStringAsync();
+                    //Debug.WriteLine(detailsResponseString);
                 }
             }
+            Debug.WriteLine("Запрос отправлен, ожидаем составление отчёта");
+            
+            //Thread.Sleep(420000);
+            Debug.WriteLine($"Выспался");
+
+            if (fullUrl != null){
+                GetDownloadLink(fullUrl);
+            }
+            
+
         }
 
         //public static async void RedirectTo()
@@ -206,12 +219,10 @@ namespace ActivationReport
         //        }
         //    }
         //}
-        
+
 
         public static async void GetDownloadLink(string url)
         {
-            //string url = "http://support.atlas-kard.ru/jira/servicedesk/customer/portal/3/TA-520578";
-
             AtlasAuth();
 
             var handler = new HttpClientHandler
@@ -240,7 +251,9 @@ namespace ActivationReport
                     JObject jsonResponse;
                     HttpResponseMessage response;
 
-                    do {
+                    do
+                    {
+                        Debug.WriteLine($"Делаю запрос");
                         response = await client.GetAsync(url);
                         response.EnsureSuccessStatusCode();
 
@@ -253,15 +266,15 @@ namespace ActivationReport
 
                         jsonResponse = JObject.Parse(JSONBody);
                         status = jsonResponse["reqDetails"]["issue"]["activityStream"].Count();
-
+                        Debug.WriteLine($"Status: {status}");
                         if (status < 6)
                         {
                             Thread.Sleep(60000);
                         }
                     } while (status != 6);
 
-                    
-                    string downloadUrl = jsonResponse["reqDetails"]["issue"]["activityStream"]
+
+                    string downloadUrl = "http://support.atlas-kard.ru" + jsonResponse["reqDetails"]["issue"]["activityStream"]
                                     .Where(activity => activity["type"].ToString() == "worker-comment")
                                     .Select(activity => activity["comment"].ToString())
                                     .Where(comment => comment.Contains("href=\""))
@@ -273,31 +286,136 @@ namespace ActivationReport
                                     .Select(activity => activity["rawComment"].ToString())
                                     .Select(rawComment => rawComment.Split(new string[] { "^" }, StringSplitOptions.None)[1].Split(']')[0])
                                     .FirstOrDefault();
-                    
 
-                    string filePath = "C:\\Users\\Makar\\Desktop\\TEST\\" + fileName;
+
+                    string filePath = "C:\\Users\\Макар\\Desktop\\Отчёты\\" + fileName;
                     using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                     {
-                        //await response.Content.CopyToAsync(fs);
-                        var responseMessage = await client.GetAsync(downloadUrl);
-                        var file = responseMessage.Content.ReadAsByteArrayAsync();
-                        //fs.Write(file, 0);
-                        Debug.WriteLine($"File downloaded successfully as {fileName}");
-                    }
+                        Debug.WriteLine($"Запрос на скачивание");
 
-                    Debug.WriteLine("Конец 1");
+                        var responseMessage = await client.GetAsync(downloadUrl);
+                        var file = await responseMessage.Content.ReadAsByteArrayAsync();
+                        try
+                        {
+                            Debug.WriteLine($"Пишу в файл");
+                            fs.Write(file, 0, file.Length);                            
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Ошибка записи файла: {ex.Message}");
+                        }
+                    }
+                    Debug.WriteLine($"Запускаю парсер");
+                    ParseAndLoad(filePath);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"An error occurred: {ex.Message}");
-                    //return null;
                 }
             }
         }
 
-        public static async void DownloadFile(string url, string name)
+        public static void ParseAndLoad(string filePath)
         {
+            Database.LoadingStatus = 1;
+            string row;
+            string[] separateRow;
+            int count = 0;
+            int totalCount = 0;
+            List<Activation> list = new List<Activation>();
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
+            using (var csvReader = new StreamReader(filePath, Encoding.GetEncoding(1251)))
+            {
+                using (var db = new AppDBContext())
+                {
+                    var listDB = db.Activations.Select(t => t.CryptoBlock).ToList();
+
+                    csvReader.ReadLine();   //skip first line
+                    while ((row = csvReader.ReadLine()) != null && !row.Substring(0, 1).Equals(";"))
+                    {
+                        separateRow = row.Split(";", System.StringSplitOptions.RemoveEmptyEntries);
+
+                        if (separateRow.Length > 19)
+                        {
+                            for (int i = 0; i < separateRow.Length - 1; i++)
+                            {
+                                if (separateRow[i].Equals(""))
+                                {
+                                    continue;
+                                }
+                                if ((!separateRow[i].Substring(separateRow[i].Length - 1, 1).Equals("\"") && !separateRow[i + 1].Substring(0, 1).Equals("\"")) ||
+                                    (!separateRow[i + 1].Substring(0, 1).Equals("\"") && !separateRow[i + 1].Substring(0, 1).Equals("=")))
+                                {
+                                    separateRow[i] = separateRow[i] + ";" + separateRow[i + 1];
+                                    separateRow[i + 1] = "";
+                                }
+                            }
+                            separateRow = separateRow.Where(s => !string.IsNullOrEmpty(s)).ToArray();
+                        }
+
+                        if (separateRow.Length != 19)
+                        {
+                            Application.Current.MainPage.DisplayAlert("Ошибка разбора строки", row, "Ок");
+                            return;
+                        }
+
+                        if (!separateRow[1].Substring(1, 5).Equals("Отказ") && !separateRow[1].Substring(1, 5).Equals("Ожида"))
+                        {
+                            var newAct = new Activation
+                            {
+                                CompanyId = Convert.ToInt16(separateRow[0].Substring(4, 10)),
+                                ActDate = Convert.ToDateTime(separateRow[3].Replace("\"", "")).ToUniversalTime().AddHours(3.0),
+                                CardNumber = separateRow[0],
+                                DateRequest = separateRow[2],
+                                DateAnswer = separateRow[3],
+                                CompanyName = separateRow[4],
+                                OGRN = separateRow[5],
+                                INN = separateRow[6],
+                                Region = separateRow[7],
+                                City = separateRow[8],
+                                Address = separateRow[9],
+                                VehicleBrand = separateRow[10],
+                                VehicleModel = separateRow[11],
+                                VehicleYear = separateRow[12],
+                                VehicleColor = separateRow[13],
+                                VRN = separateRow[14],
+                                VIN = separateRow[15],
+                                VehiclePassport = separateRow[16],
+                                CryptoBlock = separateRow[17],
+                                TachoNumber = separateRow[18]
+                            };
+
+                            //if (!listDB.Exists(x => x.Equals(newAct.CryptoBlock.ToString())))
+                            if (!listDB.Contains(separateRow[17]))
+                            {
+                                list.Add(newAct);
+                                count++;
+                                totalCount++;
+                            }
+                        }
+
+                        if (count >= 100)
+                        {
+                            db.Activations.AddRange(list);
+                            db.SaveChanges();
+                            list.Clear();
+                            count = 0;
+                        }
+                    }
+                    if (count > 0)
+                    {
+                        db.Activations.AddRange(list);
+                        db.SaveChanges();
+                    }
+                }
+            }
+            //filePath = null;
+            Debug.WriteLine("Уведомляю");
+            Database.LoadingStatus = 2;
+            Database.filePath = null;
+            //Application.Current.MainPage.DisplayAlert("Уведомление",
+            //                                          "Файл обработан. В базу данных загружено записей: " + totalCount.ToString(), "Ок");
         }
     }
-}
+} 

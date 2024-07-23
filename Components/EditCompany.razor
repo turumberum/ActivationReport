@@ -25,14 +25,12 @@
         <p class="row">
             <label class="col-2">Ежемесячный отчёт</label>
             <InputCheckbox @bind-Value="ECompany.MonthlyReport" class="col-1" />
+        </p>       
+        <p class="row">
+            <label class="col-2">Электронная почта</label>
+            <InputText @bind-Value="ECompany.Email" class="col-8" />
         </p>
-        @if (ECompany.MonthlyReport)
-        {
-            <p class="row">
-                <label class="col-2">Электронная почта</label>
-                <InputText @bind-Value="ECompany.Email" class="col-8" />
-            </p>
-        }
+        
         <p class="row">
             @if (ECompany.Cards != null && ECompany.Cards.Count > 0)
             {

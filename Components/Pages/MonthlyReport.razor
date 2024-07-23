@@ -42,6 +42,9 @@
         <input type="checkbox" id=month class="btn-check col-4" @bind="monthly" @onclick="changeMonthlyFolder" />
         <label for="month" class="btn btn-outline-warning col-4">Создавать папку с названием месяца</label>
 
+        <input type="checkbox" id=mail class="btn-check col-3" @bind="sendMail" @onclick="changeSendMail" />
+        <label for="mail" class="btn btn-outline-dark col-3">Отправлять на почту</label>
+
         @if (folderPath != null && companies != null && companies.Count > 0)
         {
             <button class="btn btn-success col-3" @onclick="createReports">Сформировать отчёт</button>
@@ -55,11 +58,18 @@
     private DateTime month = DateTime.Now;
     private string? folderPath = Preferences.Default.Get("MonthlyFolder", "");
     private bool monthly = Preferences.Default.Get("CreateMonthlyFolder", false);
+    private bool sendMail = Preferences.Default.Get("SendByEmail", false);
 
     private void changeMonthlyFolder()
     {
         monthly = !monthly;
         Preferences.Default.Set("CreateMonthlyFolder", monthly);
+    }
+
+    private void changeSendMail()
+    {
+        sendMail = !sendMail;
+        Preferences.Default.Set("SendByEmail", sendMail);
     }
 
     private async Task pickFolder() => folderPath = await Helpers.PickFolder("MonthlyFolder");
@@ -114,9 +124,21 @@
                 }                
             }
             File.Move(fullPath, fullPath.Replace(".csv", "_" + count + ".csv"));
+            
+            if (comp.Email != null && sendMail)
+            {
+                Services.SendEmail(comp, fullPath.Replace(".csv", "_" + count + ".csv"), month);
+            }
             count = 0;
         }
-        Application.Current.MainPage.DisplayAlert("Уведомление", "Отчёты успешно сформированы!", "Ок");
+        if (sendMail)
+        {
+            Application.Current.MainPage.DisplayAlert("Уведомление", "Отчёты успешно сформированы и отправлены на почту!", "Ок");
+        } 
+        else
+        {
+            Application.Current.MainPage.DisplayAlert("Уведомление", "Отчёты успешно сформированы!", "Ок");
+        }        
     }
 
     protected override async Task OnInitializedAsync() => companies = Helpers.LoadCompaniesData(true);

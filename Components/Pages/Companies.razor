@@ -21,20 +21,23 @@
                     <button class="btn btn-outline-success col-2 me-1" @onclick="() => {eCompany = comp; isEdit = true;}">Редактировать</button>
                     <button class="btn btn-danger col-1" @onclick="() => deleteCompany(comp)">Удалить</button>
                     <div class="col-8 align-content-between">
-                        <label class="ms-1  fs-5 col-6">@comp.Name</label>
-                        @if (comp.MonthlyReport)
+                        <label class="ms-1  fs-5 col-5">@comp.Name</label>
+
+                        @if (comp.Email != null)
                         {
-                            @if (comp.Email != null)
-                            {
-                                <button class="btn btn-warning me-1 col-3" disabled> @@ Ежемесячный</button>
-                            } else
-                            {
-                                <button class="btn btn-warning me-1 col-3" disabled>Ежемесячный</button>
-                            }   
+                            <button class="btn btn-dark me-1 col-1" disabled> @@ </button>
+                        } else
+                        {
+                            <label class=" me-1 col-1"/>
+                        }
+
+                        @if (comp.MonthlyReport)
+                        {                            
+                            <button class="btn btn-warning me-1 col-3" disabled>Ежемесячный</button>                              
                         } 
                         else 
                         {
-                            <label class="col-3 me-1"></label>
+                            <label class="col-3 me-1"/>
                         }
                         @if (comp.Staff)
                         {
