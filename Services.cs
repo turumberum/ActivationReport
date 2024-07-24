@@ -18,10 +18,10 @@ namespace ActivationReport
         {
             var config = new ConfigurationBuilder()
                             .AddJsonFile("appsettings.json")
-                            .Build();
+                            .Build();            
 
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress("Штрих-М", "schelkunov@shtrih-m.ru"));
+            message.From.Add(new MailboxAddress("Штрих-М", config.GetSection("Email").GetSection("Login").Value));
             message.To.Add(new MailboxAddress("Отчёт по активациям СКЗИ для " + company.Name, company.Email));
 
             if (month != null)
@@ -45,7 +45,7 @@ namespace ActivationReport
             using (var client = new SmtpClient())
             {
                 client.Connect("mail.shtrih-m.ru", 465, true);
-                client.Authenticate(config.GetConnectionString("MailLogin"), config.GetConnectionString("MailPassword"));
+                client.Authenticate(config.GetSection("Email").GetSection("Login").Value, config.GetSection("Email").GetSection("Password").Value);
 
                 client.Send(message);
                 client.Disconnect(true);
@@ -80,8 +80,8 @@ namespace ActivationReport
 
                 var content = new FormUrlEncodedContent(new[]
                 {
-                    new KeyValuePair<string, string>("os_username", config.GetConnectionString("os_username")),
-                    new KeyValuePair<string, string>("os_password", config.GetConnectionString("os_password")),
+                    new KeyValuePair<string, string>("os_username", config.GetSection("Portal").GetSection("os_username").Value),
+                    new KeyValuePair<string, string>("os_password", config.GetSection("Portal").GetSection("os_password").Value),
                     new KeyValuePair<string, string>("os_captcha", ""),
                     new KeyValuePair<string, string>("os_cookie", "true")
                 });

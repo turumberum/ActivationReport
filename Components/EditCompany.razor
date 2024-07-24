@@ -39,7 +39,7 @@
                 {
                     <p>
                         <InputText class="col-3" @bind-Value="@card.CardNumber"/>
-                    <button type="button" class="btn btn-close col-1" @onclick="() => deleteCard(card)" />
+                        <button type="button" class="btn btn-close col-1" @onclick="() => deleteCard(card)" />
                     </p>
                 }    
             }
@@ -75,17 +75,13 @@
     private async Task cancelled()
     {
         clearEmptyCard(ECompany);
-        await ECompanyChanged.InvokeAsync(new Company
-                                                    {
-                                                        Cards = new List<Card>()
-                                                    });
+        await ECompanyChanged.InvokeAsync(new Company{Cards = new List<Card>()});
         await EditChanged.InvokeAsync(false);
     }
 
     private Company clearEmptyCard(Company company)
     {
-        company.Cards.RemoveAll(card => card.CardNumber == null);
-        company.Cards.RemoveAll(card => card.CardNumber.Equals(""));
+        company.Cards.RemoveAll(card => string.IsNullOrEmpty(card.CardNumber));
         return company;
     }
 
@@ -111,10 +107,17 @@
 
     private void deleteCard(Card card)
     {
-        using (var db = new AppDBContext())
+        if (card.Id != 0)
         {
-            db.Cards.Remove(card);
-            db.SaveChanges();
+            using (var db = new AppDBContext())
+            {
+                db.Cards.Remove(card);
+                db.SaveChanges();
+            }
+        } 
+        else
+        {
+            ECompany.Cards.Remove(card);
         }
     }
 

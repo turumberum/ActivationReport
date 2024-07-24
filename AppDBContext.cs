@@ -1,6 +1,7 @@
 ﻿using ActivationReport.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using System.Diagnostics;
 
 namespace ActivationReport
 {
@@ -23,7 +24,16 @@ namespace ActivationReport
                         .AddJsonFile("appsettings.json")
                         .Build();
 
+#if DEBUG
+            {
+                optionsBuilder.UseNpgsql(config.GetConnectionString("DebugConnection"));
+            }
+#else
+            {
             optionsBuilder.UseNpgsql(config.GetConnectionString("DefaultConnection"));
+            }
+#endif
+
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

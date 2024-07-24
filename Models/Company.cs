@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Collections;
 using System.ComponentModel.DataAnnotations;
 
 namespace ActivationReport.Models
@@ -21,8 +22,10 @@ namespace ActivationReport.Models
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
             var results = new List<ValidationResult>();
-
+            var db = new AppDBContext();
             int requiredLength = Staff ? 16 : 13;
+            bool isReissue = false;
+
             foreach (var card in Cards)
             {
                 if (card.CardNumber == null || card.CardNumber.Length != requiredLength)
@@ -32,8 +35,30 @@ namespace ActivationReport.Models
                         : "Номер карты должен быть 13 символов";
                     results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
                 }
-            }
 
+                if (card.Id == 0)
+                {
+                    bool isDuplicate = db.Cards.Any(c => c.CardNumber == card.CardNumber);
+                    if (isDuplicate)
+                    {
+                        string errorMessage = "Номер карты уже существует в базе данных";
+                        results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(card.CardNumber))
+                        {
+                            isReissue = db.Cards.Any(c => c.CardNumber.Substring(0, 15) == card.CardNumber.Substring(0, 15));
+                            if (isReissue)
+                            {
+                                string errorMessage = "Номер карты уже существует, не требуется указывать перевыпуск карты";
+                                results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+                            }
+                        }
+                    }
+                    
+                }                              
+            }
             return results;
         }
     }

@@ -10,12 +10,12 @@
     @if (companies != null || companies?.Count == 0)
     {
         <p class="align-items-start">
-            @foreach (var comp in companies.OrderBy(c => c.Name).ToList())
+            @foreach (var company in companies.OrderBy(c => c.Name).ToList())
             {
                 <div>
                     <label class="d-block fw-bold">
-                        <input type="radio" class="me-2" @onclick="@(() => selectedCompany = comp)" id="@comp.Id" name="company" />
-                        @comp.Name
+                        <input type="radio" class="me-2" @onclick="@(() => selectedCompany = company)" id="@company.Id" name="company" />
+                        @company.Name
                     </label>
                 </div>                           
             }

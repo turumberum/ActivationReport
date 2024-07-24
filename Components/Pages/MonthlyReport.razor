@@ -10,11 +10,11 @@
     @if (companies != null || companies?.Count == 0)
     {
         <p class="align-items-start">
-            @foreach (var comp in companies.OrderBy(c => c.Name).ToList())
+            @foreach (var company in companies.OrderBy(c => c.Name).ToList())
             {
 
                 <label class="d-block fw-bold">
-                    @comp.Name
+                    @company.Name
                 </label>
             }
         </p>
@@ -88,20 +88,20 @@
             return;
         }
 
-        foreach(var comp in companies)
+        foreach(var company in companies)
         {
             int count = 0;            
-            string fullPath = pathToFile + month.ToString("yy_MM") + "_" + comp.Name + ".csv";
+            string fullPath = pathToFile + month.ToString("yy_MM") + "_" + company.Name + ".csv";
 
             using (var csvWriter = new StreamWriter(new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.Read), Encoding.GetEncoding(1251)))
             {
                 csvWriter.WriteLine("\"Карта мастерской\";\"Дата запроса\";\"Дата ответа\";\"Наименование организации\";\"ОГРН\";\"ИНН\";\"Код региона по классификатору\";\"Населённый пункт\";\"Адрес\";\"Марка\";\"Модель\";\"Год выпуска\";\"Цвет\";\"Регистрационный номер\";\"VIN\";\"ПТС\";\"Серийный номер СКЗИ\";\"Серийный номер тахографа\";");
                 using(var db = new AppDBContext())
                 {
-                    foreach (var card in comp.Cards)
+                    foreach (var card in company.Cards)
                     {
                         List<Activation> list;
-                        if (comp.Staff)
+                        if (company.Staff)
                         {
                             list = db.Activations
                                 .Where(a => a.ActDate.Year == month.Year && a.ActDate.Month == month.Month)
@@ -125,9 +125,9 @@
             }
             File.Move(fullPath, fullPath.Replace(".csv", "_" + count + ".csv"));
             
-            if (comp.Email != null && sendMail)
+            if (company.Email != null && sendMail)
             {
-                Services.SendEmail(comp, fullPath.Replace(".csv", "_" + count + ".csv"), month);
+                Services.SendEmail(company, fullPath.Replace(".csv", "_" + count + ".csv"), month);
             }
             count = 0;
         }

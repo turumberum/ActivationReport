@@ -12,7 +12,7 @@
         <button class="btn btn-outline-primary col-2" @onclick="countDatabaseEntries">Посчитать</button>
         @if (baseCount != null)
         {
-            <label class="col-6 mx-2 fs-6"> Количество записей: @baseCount, дата последней записи: @baseDate</label>
+            <label class="col-6 mx-2 fs-6"> Количество записей: @baseCount, c: @baseDateFirst до: @baseDateLast</label>
         }
     </p>
 
@@ -55,7 +55,8 @@
 @code {
     public static string? filePath;
     private static string? baseCount;
-    private static string? baseDate;
+    private static string? baseDateFirst;
+    private static string? baseDateLast;
     public static int LoadingStatus = 0;
 
     private async Task selectFile()
@@ -104,7 +105,8 @@
         using (var db = new AppDBContext())
         {
             baseCount = db.Activations.Count().ToString();
-            baseDate = db.Activations.OrderBy(a => a.ActDate).Last().ActDate.ToShortDateString();
+            baseDateFirst = db.Activations.OrderBy(a => a.ActDate).First().ActDate.ToShortDateString();
+            baseDateLast = db.Activations.OrderBy(a => a.ActDate).Last().ActDate.ToShortDateString();
         }
     }
 
