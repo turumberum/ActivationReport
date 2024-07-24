@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace ActivationReport.Models
 {
@@ -25,6 +26,18 @@ namespace ActivationReport.Models
             var db = new AppDBContext();
             int requiredLength = Staff ? 16 : 13;
             bool isReissue = false;
+
+            if (!string.IsNullOrEmpty(Email))
+            {
+                string pattern = "[.\\-_a-z0-9]+@([a-z0-9][\\-a-z0-9]+\\.)+[a-z]{2,6}";
+                Match isMatch = Regex.Match(Email, pattern, RegexOptions.IgnoreCase);
+                bool isValidMail = isMatch.Success;
+                if (!isValidMail)
+                {
+                    string errorMessage = "Некорректный адрес электронной почты";
+                    results.Add(new ValidationResult(errorMessage, new[] { nameof(Email) }));
+                }
+            }  
 
             foreach (var card in Cards)
             {

@@ -47,8 +47,15 @@ namespace ActivationReport
                 client.Connect("mail.shtrih-m.ru", 465, true);
                 client.Authenticate(config.GetSection("Email").GetSection("Login").Value, config.GetSection("Email").GetSection("Password").Value);
 
-                client.Send(message);
-                client.Disconnect(true);
+                try
+                {
+                    client.Send(message);
+                    client.Disconnect(true);
+                }
+                catch (Exception ex) 
+                {
+                    Console.WriteLine($"An error occurred: {ex.Message}");
+                }                
             }
         }
 
@@ -74,9 +81,7 @@ namespace ActivationReport
                 client.DefaultRequestHeaders.Add("DNT", "1");
                 client.DefaultRequestHeaders.Add("Origin", "http://support.atlas-kard.ru");
                 client.DefaultRequestHeaders.Referrer = new Uri("http://support.atlas-kard.ru/jira/servicedesk/customer/user/login?destination=user%2Frequests%3Fstatus%3Dopen");
-                //client.DefaultRequestHeaders.Referrer = new Uri("http://support.atlas-kard.ru/jira/servicedesk/customer/portal/3/TA-520578");
                 client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
-
 
                 var content = new FormUrlEncodedContent(new[]
                 {
@@ -95,7 +100,7 @@ namespace ActivationReport
         {
             Database.LoadingStatus = 1;
             AtlasAuth();
-            string fullUrl = null;
+            string? fullUrl = null;
 
             var handler = new HttpClientHandler
             {
@@ -131,7 +136,6 @@ namespace ActivationReport
                 var response = await client.PostAsync("http://support.atlas-kard.ru/jira/servicedesk/customer/portal/3/create/27", content);
 
                 var responseString = await response.Content.ReadAsStringAsync();
-                //Debug.WriteLine(JsonConvert.DeserializeObject(responseString));
 
                 var jsonResponse = JObject.Parse(responseString);
                 var requestDetailsBaseUrl = jsonResponse["requestDetailsBaseUrl"]?.ToString();
@@ -140,86 +144,15 @@ namespace ActivationReport
                 {
                     fullUrl = "http://support.atlas-kard.ru" + requestDetailsBaseUrl;
                     Debug.WriteLine($"Create full URL: {fullUrl}");
-
-                    // Send GET request to the URL
-                    //var detailsResponse = await client.GetAsync(fullUrl);
-                    //var detailsResponseString = await detailsResponse.Content.ReadAsStringAsync();
-                    //Debug.WriteLine(detailsResponseString);
                 }
-            }
-            Debug.WriteLine("Запрос отправлен, ожидаем составление отчёта");
-            
-            //Thread.Sleep(420000);
+            }            
+            Thread.Sleep(420000);
             Debug.WriteLine($"Выспался");
 
             if (fullUrl != null){
                 GetDownloadLink(fullUrl);
-            }
-            
-
+            }          
         }
-
-        //public static async void RedirectTo()
-        //{
-        //    AtlasAuth();
-
-        //    var handler = new HttpClientHandler
-        //    {
-        //        CookieContainer = new CookieContainer()
-        //    };
-
-        //    // Add cookies to the handler
-        //    //handler.CookieContainer.Add(new Uri("http://support.atlas-kard.ru"), new Cookie("JSESSIONID", "4967FAB9EA921D83BC2185F8E7BAC68E", "/", "support.atlas-kard.ru"));
-        //    handler.CookieContainer.Add(new Uri("http://support.atlas-kard.ru"), new Cookie("seraph.rememberme.cookie", "796237%3A993c597d1bdd94f3c274f43b8ae6ff9557b4373c", "/", "support.atlas-kard.ru"));
-        //    handler.CookieContainer.Add(new Uri("http://support.atlas-kard.ru"), new Cookie("atlassian.xsrf.token", "B9Y4-SFXY-UDJ1-SPMI|74446a0a93eaa639159e6e1432b0179577c48ac3|lin", "/", "support.atlas-kard.ru"));
-
-        //    using (var client = new HttpClient(handler))
-        //    {
-        //        //var client = new HttpClient();
-        //        // var jsonResponse = JObject.Parse(responseString);
-        //        var requestDetailsBaseUrl = "/jira/servicedesk/customer/portal/3/TA-520578";
-
-        //        if (requestDetailsBaseUrl != null)
-        //        {
-        //            var fullUrl = "http://support.atlas-kard.ru" + requestDetailsBaseUrl;
-        //            //Debug.WriteLine($"Navigating to: {fullUrl}");
-
-        //            // Send GET request to the URL
-        //            var detailsResponse = await client.GetAsync(fullUrl);
-        //            var detailsResponseString = await detailsResponse.Content.ReadAsStringAsync();
-
-        //            //Debug.WriteLine(detailsResponseString);
-
-        //            var htmlDoc = new HtmlDocument();
-        //            htmlDoc.LoadHtml(detailsResponseString);
-        //            var ttt = htmlDoc.DocumentNode.SelectNodes("//a[contains(@class, '\"nobr\"')]");
-
-        //            string linkClass = "\"nobr\"";
-
-        //            var parser = new AngleSharp.Html.Parser.HtmlParser();
-        //            var doc1 = parser.ParseDocument(detailsResponseString);
-        //            var rrr = doc1.QuerySelector($"a.{linkClass}");
-
-        //            var context = BrowsingContext.New(Configuration.Default);
-        //            var document = context.OpenAsync(req => req.Content(detailsResponseString)).Result;
-        //            var linkElement = document.QuerySelector($"a.{linkClass}");
-
-        //            //var file = linkElement?.Get;
-
-        //            var response = await client.GetAsync(linkElement?.GetAttribute("href"));
-        //            response.EnsureSuccessStatusCode();
-
-
-        //            string fileName = "C:\\Users\\Makar\\Desktop\\TEST\\";
-        //            using (var fs = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.None))
-        //            {
-        //                await response.Content.CopyToAsync(fs);
-        //                Debug.WriteLine($"File downloaded successfully as {fileName}");
-        //            }
-        //        }
-        //    }
-        //}
-
 
         public static async void GetDownloadLink(string url)
         {
@@ -273,7 +206,6 @@ namespace ActivationReport
                         }
                     } while (status != 6);
 
-
                     string downloadUrl = "http://support.atlas-kard.ru" + jsonResponse["reqDetails"]["issue"]["activityStream"]
                                     .Where(activity => activity["type"].ToString() == "worker-comment")
                                     .Select(activity => activity["comment"].ToString())
@@ -286,7 +218,6 @@ namespace ActivationReport
                                     .Select(activity => activity["rawComment"].ToString())
                                     .Select(rawComment => rawComment.Split(new string[] { "^" }, StringSplitOptions.None)[1].Split(']')[0])
                                     .FirstOrDefault();
-
 
                     string filePath = "C:\\Users\\Макар\\Desktop\\Отчёты\\" + fileName;
                     using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
