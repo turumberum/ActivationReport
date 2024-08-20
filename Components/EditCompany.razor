@@ -38,7 +38,7 @@
                 @foreach (var card in ECompany.Cards)
                 {
                     <p>
-                        <InputText class="col-3" @bind-Value="@card.CardNumber"/>
+                        <InputText class="col-3" oninput="this.value=this.value.toUpperCase()" @bind-Value="@card.CardNumber" />
                         <button type="button" class="btn btn-close col-1" @onclick="() => deleteCard(card)" />
                     </p>
                 }    

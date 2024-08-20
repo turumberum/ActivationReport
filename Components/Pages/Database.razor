@@ -18,17 +18,8 @@
 
     <p class="row align-items-center">
         <label class="col-3">Запросить файл</label>
-        <button class="btn btn-outline-primary col-2" @onclick="loadFromAtlas">Запрос на портал</button>
-
-        @if (LoadingStatus == 1)
-        {
-            <label class="col-3">Загружаю данные</label>
-        }
-
-        @if (LoadingStatus == 2)
-        {
-            <label class="col-3">Данные загружены</label>
-        }        
+        <button class="btn btn-outline-primary col-2" @onclick="loadFromAtlas" disabled="@LoadingStatus">Запрос на портал</button>
+        <label style="display: @(LoadingStatus ? "block" : "none")">Идёт загрузка...</label>
     </p>
 
     <p class="row align-items-center">
@@ -57,7 +48,7 @@
     private static string? baseCount;
     private static string? baseDateFirst;
     private static string? baseDateLast;
-    public static int LoadingStatus = 0;
+    public static bool LoadingStatus = false;
 
     private async Task selectFile()
     {
@@ -77,11 +68,10 @@
             filePath = response.FullPath;
     }
 
-    private void loadFromAtlas()
+    private async Task loadFromAtlas()
     {
         string startDate;
-        string endDate = DateTime.Today.ToShortDateString();
-
+        string endDate = DateTime.Today.ToShortDateString();   
 
         using (var db = new AppDBContext())
         {
@@ -90,13 +80,13 @@
 
         if (startDate.Equals(endDate) || startDate.Equals(DateTime.Today.AddDays(-1).ToShortDateString()))
         {
-            Application.Current.MainPage.DisplayAlert("Уведомление", "Обновление базы не требуется", "Ок");
+            await Application.Current.MainPage.DisplayAlert("Уведомление", "Обновление базы не требуется", "Ок");
         } 
         else
         {
-            Thread myThread = new Thread(() => Services.AtlasRequest(startDate, endDate));
             Debug.WriteLine("Старт потока");
-            myThread.Start();            
+            LoadingStatus = true;
+            await Services.AtlasRequest(startDate, endDate);   
         }        
     }
 
@@ -110,11 +100,9 @@
         }
     }
 
-    private void fileUpload()
+    private async Task fileUpload()
     {
-        Thread myThread = new Thread(() => Services.ParseAndLoad(filePath));
-        Debug.WriteLine("Старт потока");
-        Debug.WriteLine(filePath);
-        myThread.Start();
+        LoadingStatus = true;
+        await Services.ParseAndLoad(filePath);
     }
 }

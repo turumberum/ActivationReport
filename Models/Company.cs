@@ -25,53 +25,99 @@ namespace ActivationReport.Models
             var results = new List<ValidationResult>();
             var db = new AppDBContext();
             int requiredLength = Staff ? 16 : 13;
-            bool isReissue = false;
+            string mailPattern = "[.\\-_a-z0-9]+@([a-z0-9][\\-a-z0-9]+\\.)+[a-z]{2,6}";
+            string cardPattern = @"^(RUM|rum)"; //@"^(RUM|rum)\d{10}(\d{3})?&"
 
             if (!string.IsNullOrEmpty(Email))
-            {
-                string pattern = "[.\\-_a-z0-9]+@([a-z0-9][\\-a-z0-9]+\\.)+[a-z]{2,6}";
-                Match isMatch = Regex.Match(Email, pattern, RegexOptions.IgnoreCase);
-                bool isValidMail = isMatch.Success;
-                if (!isValidMail)
+            {                
+                Match isMatch = Regex.Match(Email, mailPattern, RegexOptions.IgnoreCase);
+                if (!isMatch.Success)
                 {
-                    string errorMessage = "Некорректный адрес электронной почты";
-                    results.Add(new ValidationResult(errorMessage, new[] { nameof(Email) }));
+                    results.Add(new ValidationResult("Некорректный адрес электронной почты", new[] { nameof(Email) }));
                 }
-            }  
+            }
 
             foreach (var card in Cards)
             {
-                if (card.CardNumber == null || card.CardNumber.Length != requiredLength)
+                if (string.IsNullOrEmpty(card.CardNumber))
                 {
-                    string errorMessage = Staff
-                        ? "Номер карты должен быть 16 символов"
-                        : "Номер карты должен быть 13 символов";
-                    results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+                    results.Add(new ValidationResult("Укажите номер карты мастерской", new[] { nameof(Cards) }));
+                    continue;
                 }
 
-                if (card.Id == 0)
+                if (card.CardNumber.Length != requiredLength)
                 {
-                    bool isDuplicate = db.Cards.Any(c => c.CardNumber == card.CardNumber);
-                    if (isDuplicate)
+                    string errorMessage = $"Номер карты должен быть {requiredLength} символов, сейчас: {card.CardNumber.Length} символов";
+                    results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+                    continue;
+                }
+
+                if (!Regex.IsMatch(card.CardNumber, cardPattern, RegexOptions.IgnoreCase))
+                {
+                    results.Add(new ValidationResult("Номер карты должен начинаться с RUM", new[] { nameof(Cards) }));
+                    continue;
+                }               
+                
+                bool isDuplicate = db.Cards.Any(c => c.CardNumber == card.CardNumber && c.Id != card.Id);
+                if (isDuplicate)
+                {
+                    results.Add(new ValidationResult("Номер карты уже существует в базе данных", new[] { nameof(Cards) }));
+                    continue;
+                }
+
+                if (Staff)
+                {
+                    bool isReissue = db.Cards.Any(c => c.CardNumber.Substring(0, 15) == card.CardNumber.Substring(0, 15) && c.Id != card.Id);
+                    if (isReissue)
                     {
-                        string errorMessage = "Номер карты уже существует в базе данных";
-                        results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+                        results.Add(new ValidationResult("Номер карты уже существует, не требуется указывать перевыпуск карты", new[] { nameof(Cards) }));
                     }
-                    else
-                    {
-                        if (!string.IsNullOrEmpty(card.CardNumber))
-                        {
-                            isReissue = db.Cards.Any(c => c.CardNumber.Substring(0, 15) == card.CardNumber.Substring(0, 15));
-                            if (isReissue)
-                            {
-                                string errorMessage = "Номер карты уже существует, не требуется указывать перевыпуск карты";
-                                results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
-                            }
-                        }
-                    }
-                    
-                }                              
+                }
             }
+
+            //foreach (var card in Cards)
+            //{
+            //    if (!string.IsNullOrEmpty(card.CardNumber))
+            //    {
+
+            //        Match isMatch = Regex.Match(card.CardNumber, cardPattern, RegexOptions.IgnoreCase);
+            //        if (!isMatch.Success)
+            //        {
+            //            string errorMessage = "Номер карты должен начинаться с RUM";
+            //            results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+            //        }
+            //    }
+
+            //    if (string.IsNullOrEmpty(card.CardNumber))
+            //    {
+            //        string errorMessage = "Укажите номер карты мастерской";
+            //        results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+            //    } 
+            //    else if (card.CardNumber.Length != requiredLength) 
+            //    { 
+            //        string errorMessage = Staff
+            //            ? "Номер карты должен быть 16 символов, сейчас: " + card.CardNumber?.Length
+            //            : "Номер карты должен быть 13 символов, сейчас: " + card.CardNumber?.Length;
+            //        results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+            //    }
+
+            //    bool isDuplicate = db.Cards.Any(c => c.CardNumber == card.CardNumber && c.Id != card.Id);
+            //    if (isDuplicate)
+            //    {
+            //        string errorMessage = "Номер карты уже существует в базе данных";
+            //        results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+            //    }
+            //    else if (!string.IsNullOrEmpty(card.CardNumber) && Staff)
+            //    {
+            //        bool isReissue = db.Cards.Any(c => c.CardNumber.Substring(0, 15) == card.CardNumber.Substring(0, 15) && c.Id != card.Id);
+            //        if (isReissue)
+            //        {
+            //            string errorMessage = "Номер карты уже существует, не требуется указывать перевыпуск карты";
+            //            results.Add(new ValidationResult(errorMessage, new[] { nameof(Cards) }));
+            //        }                    
+            //    }
+
+            //}
             return results;
         }
     }
