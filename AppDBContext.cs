@@ -24,7 +24,7 @@ namespace ActivationReport
                         .AddJsonFile("appsettings.json")
                         .Build();
 
-#if DEBUG
+#if DEBUG1
             {
                 optionsBuilder.UseNpgsql(config.GetConnectionString("DebugConnection"));
             }

@@ -1,0 +1,261 @@
+﻿@page "/"
+@using System.Text
+@using ActivationReport.Models
+@using CommunityToolkit.Maui.Views
+@using System.Diagnostics
+
+<article>
+    <h3>Разбор файла с логом активации</h3>    
+
+    <p class="row align-items-center">
+        @* <label class="col-2">Выберите файл</label> *@
+        <button class="btn btn-outline-primary col-3" @onclick="selectFile">Выбрать файл</button>
+        @if (filePath != null)
+        {
+            <label class="col-6 mx-2 fs-6">@filePath</label>
+        }
+        else
+        {
+            <label class="col-6 mx-2 fs-6">Файл не выбран!</label>
+        }
+    </p>
+
+    @if (filePath != null)
+    {
+        <p class="row justify-content-end">
+            <button class="btn btn-primary col-4" @onclick="() => ReadBinaryFile(filePath)">Разобрать файл</button>
+        </p>
+    }
+
+    @if (filePath != null)
+    {
+        <p class="row justify-content-start">
+            @foreach(var line in lines)
+            {
+                <div>@line</div>
+                <hr />
+            }
+        </p>
+    }
+</article>
+
+@code {
+    public static string? filePath;
+    public static List<string> lines = new();
+
+    private async Task selectFile()
+    {
+        var customFileType = new FilePickerFileType(
+                new Dictionary<DevicePlatform, IEnumerable<string>>
+                                {
+                        { DevicePlatform.WinUI, new[] { ".log" } }, // file extension
+                                });
+
+        var response = await FilePicker.PickAsync(new PickOptions
+            {
+                PickerTitle = "Выберите файл в формате *.log",
+                FileTypes = customFileType,
+            });
+
+        if (response != null)
+            filePath = response.FullPath;
+    }
+
+    // struct LOGITEM
+    // {
+    //     uint recNumber;
+    //     uint date;
+    //     uint type;
+    //     short extLength;
+    //     byte[] extData; //[256 - 15]
+    //     byte crc;
+    // }
+
+    // struct SKZI_ACTIVATDATE
+    // {
+    //     char[] nkmVersion;      //16
+    //     byte[] cs_Serial;       //8
+    //     byte[] gnss_Serial;     //8
+    //     byte[] bcd_prodDate;    //6
+    //     byte[] manufacturerName;//36
+    //     byte[] refNumber;       //16
+    //     byte[] partNumber;      //16
+    // }
+
+    // enum EventType
+    // {
+    //     __lrtCardInsertReader1  =1,
+    //     __lrtCardInsertReader2  =2,
+    //     __lrtCard1ReadyToAct    =3,
+    //     __lrtCard2ReadyToAct    =4,
+    //     __lrtCard1AuthOk        =5,
+    //     __lrtCard2AuthOk        =6,
+    // }
+
+    private string LogItemParse()
+    {
+        byte[] outItem = new byte[11];
+        int counter = 0;
+        using (BinaryReader reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
+        {
+            while (!reader.PeekChar().Equals('\n'))
+            {
+                reader.ReadByte();
+                counter++;
+                // var recNumber = reader.ReadBytes(4);
+                // var date = reader.ReadBytes(4);
+                // var realTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc).AddSeconds(BitConverter.ToInt32(date, 0));
+
+                // var type = reader.ReadBytes(4);
+                // var extLength = reader.ReadBytes(2);
+                // if (BitConverter.ToInt32(type, 0) == 14)
+                // {
+                //     var nkmTimeOff = reader.ReadBytes(4);
+                //     var realTimeOff = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc).AddSeconds(BitConverter.ToInt32(nkmTimeOff, 0));
+
+                //     var nkmOffCause = reader.ReadBoolean();
+                //     var nkmVersion = reader.ReadBytes(10);
+                // }
+                // var crc = reader.ReadByte();
+            }
+        }
+
+        return outItem.ToString();
+    }
+
+    static void ReadBinaryFile(string filePath)
+    {
+        //var lines = new List<string>();
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+        using (var br = new BinaryReader(fs))
+        {
+            while (fs.Position < fs.Length)
+            {
+                try
+                {
+                    // Читаем 4 байта порядкового номера
+                    int recordNumber = br.ReadInt32();
+
+                    // Читаем 4 байта даты и времени
+                    int timestampRaw = br.ReadInt32();
+                    DateTime timestamp = DateTimeOffset.FromUnixTimeSeconds(timestampRaw).DateTime;
+
+                    // Читаем 4 байта типа события
+                    int eventType = br.ReadInt32();
+
+                    // Формируем строку
+                    string line = $"№: {recordNumber}, Время: {timestamp}, Тип события: {GetEventName(eventType)}, ";
+
+                    // Читаем 2 байта длины дополнительной информации
+                    short additionalInfoLength = br.ReadInt16();
+
+                    // Добавляем доп. информацию по событию
+                    switch (eventType)
+                    {
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 4:
+                        case 5:
+                        case 6:
+                            line += $"Номер карты: {Encoding.UTF8.GetString(br.ReadBytes(18))}, ";
+                            break;
+                        case 7:
+                        case 10:
+                            line += br.ReadBoolean();
+                            break;
+                        case 12:
+                            line += $"Номер карты: {Encoding.UTF8.GetString(br.ReadBytes(18))}, ";
+                            line += $"VIN {Encoding.UTF8.GetString(br.ReadBytes(17))}, ";
+                            line += $"Гос.номер {Encoding.UTF8.GetString(br.ReadBytes(15))}, ";
+                            line += $"Макс.скорость {br.ReadByte}, ";
+                            break;
+                        case 14:                            
+                            line += $"Версия: {new string(br.ReadChars(16)).TrimEnd('\0')}, ";
+                            line += $"КС: {BitConverter.ToString(br.ReadBytes(8)).Replace("-", "")}, ";
+                            line += $"ГНСС: {BitConverter.ToString(br.ReadBytes(8)).Replace("-", "")}, ";
+                            line += $"Дата производства: {BcdToDate(br.ReadBytes(6))}, ";
+                            // line += $"Производитель: {new string(br.ReadChars(36)).TrimEnd('\0')}, ";
+                            line += $"Производитель: {Encoding.GetEncoding("iso-8859-5").GetString(br.ReadBytes(36)).TrimEnd('\0')}, ";
+                            line += $"Рег.номер: {Encoding.UTF8.GetString(br.ReadBytes(16))}, ";
+                            line += $"Серийный номер: {Encoding.UTF8.GetString(br.ReadBytes(16))}, ";
+                            line += $"Время отключения питания: {DateTimeOffset.FromUnixTimeSeconds(br.ReadInt32()).DateTime}, ";
+                            line += $"Причина: {br.ReadInt32()}, ";
+                            //var test = br.ReadBytes(10);
+                            line += $"Статус СКЗИ: {Encoding.GetEncoding(1251).GetString(br.ReadBytes(10))}, ";
+                            break;
+                        default:
+                            break;
+
+                    }
+                    // Читаем дополнительную информацию
+                    //string additionalInfo = Encoding.UTF8.GetString(br.ReadBytes(additionalInfoLength));
+
+                    // Пустые символы
+                    var otherByte = br.ReadBytes(256 - (15 + additionalInfoLength));
+
+                    // Читаем 1 байт CRC
+                    byte crc = br.ReadByte();
+                    line += $"CRC: {crc}";    //{crc:X2}
+
+                    // Byajhvfwbz==: {additionalInfo}, ";
+                    lines.Add(line);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error reading file: {ex.Message}");
+                    break;
+                }
+            }
+        }
+        //return lines;
+    }
+
+    static string BcdToDate(byte[] bcd)
+    {
+        if (bcd.Length != 6)
+            throw new ArgumentException("Date field must be 6 bytes long.");
+
+        // Конвертируем каждую пару BCD в читаемую дату
+        int year = BcdToInt(bcd[0]) + 2000; // Предполагаем, что год после 2000
+        int month = BcdToInt(bcd[1]);
+        int day = BcdToInt(bcd[2]);
+        int hour = BcdToInt(bcd[3]);
+        int minute = BcdToInt(bcd[4]);
+        int second = BcdToInt(bcd[5]);
+
+        // Форматируем дату в виде строки
+        return $"{day:D2}.{month:D2}.{year:D4} {hour:D2}:{minute:D2}:{second:D2}";
+    }
+
+    static int BcdToInt(byte bcd)
+    {
+        // Преобразует один байт BCD в целое число
+        return ((bcd >> 4) * 10) + (bcd & 0x0F);
+    }
+
+    private static string GetEventName(int eventType)
+    {
+        var names = new Dictionary<int, string>()
+        {
+            {1,  "Установка карты в слот 1"},               // __lrtCardInsertReader1 = 1,
+            {2,  "Установка карты в слот 2"},               // __lrtCardInsertReader2 = 2,
+            {3,  "Карта в слоте 1 готова к активации"},     // __lrtCard1ReadyToAct = 3,
+            {4,  "Карта в слоте 2 готова к активации"},     // __lrtCard2ReadyToAct = 4,
+            {5,  "Аутентифкация карты в слоте 1"},          // __lrtCard1AuthOk = 5,
+            {6,  "Аутентифкация карты в слоте 2"},          // __lrtCard2AuthOk = 6,
+            {7,  "Выбор использования блока СКЗИ"},         // __lrtNKMDoActYes_No     =7,
+            {8,  "Выполнена подпись запроса на ктивацию"},  // __lrtNKMDoSignStep1 = 8,
+            {9,  "Переход блока СКЗИ на ШАГ2"},             // __lrtNKMGoToStep2 = 9,
+            {10,  "Выбрана загрузка сертифката"},           // __lrtNKMSelectLoadCerts = 10,
+            {11,  "Загрузка сертифката"},                   // __lrtNKMDoLoadCerts = 11,
+            {12,  "Активация ТС в блоке СКЗИ"},             // __lrtNKMDoVehclActivate = 12,
+            {13,  "Сброс на ШАГ1"},                         // __lrtNKMResetToStep1 = 13,
+            {14,  "Включение питания СКЗИ"},                // __lrtNKMPowerON = 14,
+        };
+
+        return names[eventType];
+    }
+}
