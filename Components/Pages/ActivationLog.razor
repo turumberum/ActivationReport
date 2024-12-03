@@ -8,7 +8,6 @@
     <h3>Разбор файла с логом активации</h3>    
 
     <p class="row align-items-center">
-        @* <label class="col-2">Выберите файл</label> *@
         <button class="btn btn-outline-primary col-3" @onclick="selectFile">Выбрать файл</button>
         @if (filePath != null)
         {
@@ -37,11 +36,29 @@
             }
         </p>
     }
+
+    @if (lines.Count() > 0)
+    {
+        @* <p class="row align-items-center justify-content-center">
+            <button class="btn btn-primary col-3" @onclick="pickFolder">Выбор папки для отчётов</button>
+            @if (folderPath != null)
+            {
+                <label class="col-6">@folderPath</label>
+                <button class="btn btn-outline-primary col-3" @onclick="() => global::Helpers.OpenFolder(folderPath)">Открыть папку с отчётами</button>
+            }
+        </p> *@
+        <p class="row justify-content-end">
+            <button class="btn btn-primary col-4" @onclick="() => Print()">Сохранить в файл</button>
+        </p>
+    }
 </article>
 
 @code {
     public static string? filePath;
+    public static string? folderPath;
     public static List<string> lines = new();
+
+    private async Task pickFolder() => folderPath = await Helpers.PickFolder("LogFolder");
 
     private async Task selectFile()
     {
@@ -61,72 +78,33 @@
             filePath = response.FullPath;
     }
 
-    // struct LOGITEM
-    // {
-    //     uint recNumber;
-    //     uint date;
-    //     uint type;
-    //     short extLength;
-    //     byte[] extData; //[256 - 15]
-    //     byte crc;
-    // }
-
-    // struct SKZI_ACTIVATDATE
-    // {
-    //     char[] nkmVersion;      //16
-    //     byte[] cs_Serial;       //8
-    //     byte[] gnss_Serial;     //8
-    //     byte[] bcd_prodDate;    //6
-    //     byte[] manufacturerName;//36
-    //     byte[] refNumber;       //16
-    //     byte[] partNumber;      //16
-    // }
-
-    // enum EventType
-    // {
-    //     __lrtCardInsertReader1  =1,
-    //     __lrtCardInsertReader2  =2,
-    //     __lrtCard1ReadyToAct    =3,
-    //     __lrtCard2ReadyToAct    =4,
-    //     __lrtCard1AuthOk        =5,
-    //     __lrtCard2AuthOk        =6,
-    // }
-
-    private string LogItemParse()
+    struct LOGITEM
     {
-        byte[] outItem = new byte[11];
-        int counter = 0;
-        using (BinaryReader reader = new BinaryReader(File.Open(filePath, FileMode.Open)))
-        {
-            while (!reader.PeekChar().Equals('\n'))
-            {
-                reader.ReadByte();
-                counter++;
-                // var recNumber = reader.ReadBytes(4);
-                // var date = reader.ReadBytes(4);
-                // var realTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc).AddSeconds(BitConverter.ToInt32(date, 0));
+        uint recNumber;
+        uint date;
+        uint type;
+        short extLength;
+        byte[] extData; 
+        byte crc;
+    }
 
-                // var type = reader.ReadBytes(4);
-                // var extLength = reader.ReadBytes(2);
-                // if (BitConverter.ToInt32(type, 0) == 14)
-                // {
-                //     var nkmTimeOff = reader.ReadBytes(4);
-                //     var realTimeOff = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc).AddSeconds(BitConverter.ToInt32(nkmTimeOff, 0));
-
-                //     var nkmOffCause = reader.ReadBoolean();
-                //     var nkmVersion = reader.ReadBytes(10);
-                // }
-                // var crc = reader.ReadByte();
-            }
-        }
-
-        return outItem.ToString();
+    struct SKZI_ACTIVATDATE
+    {
+        char[] nkmVersion;      //16
+        byte[] cs_Serial;       //8
+        byte[] gnss_Serial;     //8
+        byte[] bcd_prodDate;    //6
+        byte[] manufacturerName;//36
+        byte[] refNumber;       //16
+        byte[] partNumber;      //16
     }
 
     static void ReadBinaryFile(string filePath)
     {
-        //var lines = new List<string>();
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);   
+
+        byte computedCRC;
+        byte actualCRC;
 
         using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
         using (var br = new BinaryReader(fs))
@@ -135,21 +113,32 @@
             {
                 try
                 {
-                    // Читаем 4 байта порядкового номера
-                    int recordNumber = br.ReadInt32();
+                    int position = 0;
+                    // Чтение 1 записи (включая CRC)
+                    byte[] record = br.ReadBytes(256);
 
-                    // Читаем 4 байта даты и времени
-                    int timestampRaw = br.ReadInt32();
+                    // Стираем CRC (последний байт) для вычисления
+                    actualCRC = record[^1];  // Последний байт — это CRC
+                    record[^1] = 0;          // "Стираем" CRC
+
+                    // Вычисляем CRC
+                    computedCRC = CalculateCRC(record);
+
+                    // 4 байта порядкового номера записи
+                    int recordNumber = ReadInt(record, ref position);
+
+                    // 4 байта даты и времени
+                    int timestampRaw = ReadInt(record, ref position);
                     DateTime timestamp = DateTimeOffset.FromUnixTimeSeconds(timestampRaw).DateTime;
 
-                    // Читаем 4 байта типа события
-                    int eventType = br.ReadInt32();
+                    // 4 байта типа события
+                    int eventType = ReadInt(record, ref position);
 
                     // Формируем строку
-                    string line = $"№: {recordNumber}, Время: {timestamp}, Тип события: {GetEventName(eventType)}, ";
+                    string line = $"№: {recordNumber}, Время: {timestamp}, Тип события: {GetEventName(eventType)}, \n";
 
-                    // Читаем 2 байта длины дополнительной информации
-                    short additionalInfoLength = br.ReadInt16();
+                    // 2 байта длины дополнительной информации
+                    short additionalInfoLength = ReadShort(record, ref position);
 
                     // Добавляем доп. информацию по событию
                     switch (eventType)
@@ -160,47 +149,51 @@
                         case 4:
                         case 5:
                         case 6:
-                            line += $"Номер карты: {Encoding.UTF8.GetString(br.ReadBytes(18))}, ";
+                            line += $"Номер карты: {ReadFixedStringFromByte(record, ref position, 18)}, ";
                             break;
                         case 7:
                         case 10:
-                            line += br.ReadBoolean();
+                            line += br.ReadBoolean() ? "Да" : "Нет"; // Проверить
                             break;
                         case 12:
-                            line += $"Номер карты: {Encoding.UTF8.GetString(br.ReadBytes(18))}, ";
-                            line += $"VIN {Encoding.UTF8.GetString(br.ReadBytes(17))}, ";
-                            line += $"Гос.номер {Encoding.UTF8.GetString(br.ReadBytes(15))}, ";
-                            line += $"Макс.скорость {br.ReadByte}, ";
+                            line += $"Номер карты: {ReadFixedStringFromByte(record, ref position, 18)}, ";
+                            line += $"VIN {ReadFixedStringFromByte(record, ref position, 17)}, ";
+                            line += $"Гос.номер {ReadFixedStringFromByte(record, ref position, 15)}, ";
+                            line += $"Макс.скорость {br.ReadByte()}, ";
                             break;
-                        case 14:                            
-                            line += $"Версия: {new string(br.ReadChars(16)).TrimEnd('\0')}, ";
-                            line += $"КС: {BitConverter.ToString(br.ReadBytes(8)).Replace("-", "")}, ";
-                            line += $"ГНСС: {BitConverter.ToString(br.ReadBytes(8)).Replace("-", "")}, ";
-                            line += $"Дата производства: {BcdToDate(br.ReadBytes(6))}, ";
-                            // line += $"Производитель: {new string(br.ReadChars(36)).TrimEnd('\0')}, ";
-                            line += $"Производитель: {Encoding.GetEncoding("iso-8859-5").GetString(br.ReadBytes(36)).TrimEnd('\0')}, ";
-                            line += $"Рег.номер: {Encoding.UTF8.GetString(br.ReadBytes(16))}, ";
-                            line += $"Серийный номер: {Encoding.UTF8.GetString(br.ReadBytes(16))}, ";
-                            line += $"Время отключения питания: {DateTimeOffset.FromUnixTimeSeconds(br.ReadInt32()).DateTime}, ";
-                            line += $"Причина: {br.ReadInt32()}, ";
-                            //var test = br.ReadBytes(10);
-                            line += $"Статус СКЗИ: {Encoding.GetEncoding(1251).GetString(br.ReadBytes(10))}, ";
+                        case 14:
+                            // line += $"Время отключения питания: {DateTimeOffset.FromUnixTimeSeconds(ReadInt(record, ref position)).DateTime}, ";
+                            // line += $"Причина: {ReadInt(record, ref position)}, ";
+                            // line += $"Статус СКЗИ: {ReadFixedStringFromByte(record, ref position, 10)}, ";
                             break;
-                        default:
-                            break;
-
                     }
-                    // Читаем дополнительную информацию
-                    //string additionalInfo = Encoding.UTF8.GetString(br.ReadBytes(additionalInfoLength));
 
-                    // Пустые символы
-                    var otherByte = br.ReadBytes(256 - (15 + additionalInfoLength));
+                    // Добавляем данные по блоку СКЗИ
+                    line += $"Версия: {ReadChars(record, ref position, 16)}, \n";
+                    line += $"КС: {ReadFixedStringFromByte(record, ref position, 8)}, \n";
+                    line += $"ГНСС: {ReadFixedStringFromByte(record, ref position, 8)}, \n";
+                    line += $"Дата производства: {BcdToDate(ReadBytes(record, ref position, 6))}, \n";
+                    line += $"Производитель: {ReadCardString(ReadBytes(record, ref position, 36))}, \n";
+                    line += $"Рег.номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, \n"; //Encoding.UTF8.GetString(br.ReadBytes(16))
+                    line += $"Серийный номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, \n";
 
-                    // Читаем 1 байт CRC
-                    byte crc = br.ReadByte();
-                    line += $"CRC: {crc}";    //{crc:X2}
+                    // Пустые символы в конце строки
+                    // var otherByte = br.ReadBytes(256 - (15 + additionalInfoLength));
 
-                    // Byajhvfwbz==: {additionalInfo}, ";
+                    // 1 байт CRC
+                    //byte crc = br.ReadByte();
+                    line += $"CRC: {actualCRC}";
+
+                    //Проверяем CRC
+                    if (computedCRC == actualCRC)
+                    {
+                        line += " (CRC корректно)";
+                    }
+                    else
+                    {
+                        line += " (CRC неверно)";
+                    }
+
                     lines.Add(line);
                 }
                 catch (Exception ex)
@@ -209,8 +202,80 @@
                     break;
                 }
             }
+
         }
-        //return lines;
+    }
+
+    static byte CalculateCRC(byte[] record)
+    {
+        byte crc = 0;
+        foreach (var b in record)
+        {            
+            crc = (byte)(crc + b);
+        }
+        return crc;
+        // Возвращаем только младший байт суммы
+        //return (byte)(sum & 0xFF);
+    }
+
+    static byte[] ReadBytes(byte[] bytes, ref int position, int lenght) // Метод для чтения произвольного кол-ва байт
+    {
+        byte[] value = bytes[position..(position+lenght)];
+        position += lenght; 
+        return value;
+    }
+
+    static string ReadChars(byte[] bytes, ref int position, int lenght) // Метод для чтения произвольного кол-ва char
+    {
+        StringBuilder sb = new StringBuilder();
+        int maxPosition = position + lenght;
+        while (position < maxPosition)
+        {
+            byte b = bytes[position++];
+            sb.Append((char)b);
+        }
+
+        return sb.ToString().TrimEnd('\0');
+    }
+
+    static int ReadInt(byte[] bytes, ref int position) // Метод для чтения int (4 байта)
+    {
+        int value = BitConverter.ToInt32(bytes, position);
+        position += 4; // Смещаем позицию на 4 байта
+        return value;
+    }
+
+    static short ReadShort(byte[] bytes, ref int position) // Метод для чтения short (2 байта)
+    {
+        short value = BitConverter.ToInt16(bytes, position);
+        position += 2; // Смещаем позицию на 2 байта
+        return value;
+    }
+
+    static byte ReadByte(byte[] bytes, ref int position) // Метод для чтения одного байта
+    {
+        byte value = bytes[position];
+        position += 1; // Смещаем позицию на 1 байт
+        return value;
+    }
+
+    static string ReadFixedStringFromByte(byte[] bytes, ref int position, int length) // Метод для чтения строки фиксированного размера
+    {
+        byte[] buffer = new byte[length];
+        Array.Copy(bytes, position, buffer, 0, length);
+        position += length;
+
+        var test = Encoding.UTF8.GetString(buffer);
+        // Убираем нулевые символы и преобразуем в строку
+        return BitConverter.ToString(buffer).Replace("-", "").TrimEnd('\0');
+    }
+
+    static string ReadCardString(byte[] bytes)
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+        int codePage = bytes[0];
+        return Encoding.GetEncoding("iso-8859-" + codePage.ToString()).GetString(bytes, 1, 35).TrimEnd('\0');
     }
 
     static string BcdToDate(byte[] bcd)
@@ -257,5 +322,11 @@
         };
 
         return names[eventType];
+    }
+
+    static void Print()
+    {
+        var pdfService = new PdfService();
+        pdfService.CreatePdfFromList(lines, filePath.Replace(".log", ".pdf"));
     }
 }

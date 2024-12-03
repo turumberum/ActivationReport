@@ -1,7 +1,282 @@
 ﻿@page "/converter"
 
-<h3>NumberConverter</h3>
+<h3>Преобразование номера тахографа "ШТРИХ-ТахоRUS"</h3>
+
+<form id="appbundle_statement" name="appbundle_statement" method="post">	
+	
+	<h6>Введите серийный номер тахографа в формате "0012345678/12 12/15/FA" или "12345678/12 12/15/FA" или "4E61BC00121415FA"</h6>
+	<br>
+	<h5>Что переводить:</h5>
+	<div class="row mb-2">
+		<div class="col-sm-2">
+			<div class="form-group">
+				<input type="text" id="taho_number" maxlength="22" required="" class="form-control">
+			</div>
+		</div>
+		<div class="col-sm-4">
+			<div class="form-group">
+				<input type="button" class="btn btn-primary" onclick="convert()" value="Перевести номер &quot;ШТРИХ-ТахоRUS&quot; из десятичного вида в шестнадцатеричный">
+			</div>
+		</div>
+	</div>
+				
+	<div class="row mb-2">
+		<div class="col-sm-2">
+		</div>
+		<div class="col-sm-4">
+			<div class="form-group">
+				<input type="button" class="btn btn-primary" onclick="convert_hex()" value="Перевести номер из шестнадцатеричного вида в десятичный">
+			</div>
+		</div>
+	</div>
+				
+	<div class="row mb-2 align-items-center">
+		<div class="col-sm-2">
+			<h6 class="d-flex justify-content-end">Номер VDO (8 символов):</h6>
+		</div>
+		<div class="col-sm-2">
+			<div class="form-group">							
+				<input type="text" id="taho_number_vdo" maxlength="8" size="8" class="form-control">
+			</div>
+		</div>
+	</div>	
+	<div class="row mb-1 align-items-center">
+		<div class="col-sm-2">
+			<h6 class="d-flex justify-content-end">Дата изготовления:</h6>							
+		</div>
+		<div class="col-sm-2">
+			<select id="category" class="form-select" onchange="changeView(this)">
+				<option selected="" disabled="">выбрать источник информации</option>
+				<option value="01">из распечатки</option>
+				<option value="02">с шильдика</option>									
+			</select>
+		</div>
+	</div>	
+					
+	<div class="row mb-1 align-items-center">
+		<div class="row mb-1 align-items-center" id="01" style="display:none;">					
+			<div class="col-sm-2"></div>
+							
+			<div class="col-sm-1 ms-1">
+				<div class="form-group">																
+					<select class="form-select" id="taho_month_vdo">
+						<option selected="" disabled="" value="00">месяц</option>
+						<option value="01">01</option>
+						<option value="02">02</option>
+						<option value="03">03</option>
+						<option value="04">04</option>
+						<option value="05">05</option>
+						<option value="06">06</option>
+						<option value="07">07</option>
+						<option value="08">08</option>
+						<option value="09">09</option>
+						<option value="10">10</option>
+						<option value="11">11</option>
+						<option value="12">12</option>		  
+					</select>
+				</div>
+			</div>						
+			<div class="col-sm-1 ms-1">
+				<div class="form-group">
+					<input type="text" id="taho_year_vdo" placeholder="год выпуска" maxlength="4" size="4" class="form-control">
+				</div>
+			</div>
+							
+			<div class="col-sm-3">
+			<div class="form-group">
+				<input type="button" class="btn btn-primary" onclick="convertVDO()" value="Перевести номер VDO в шестнадцатиричный вид">										
+			</div>
+			</div>	
+		</div>
+						
+		<div class="row mb-1 align-items-center" id="02" style="display:none;">	
+			<div class="col-sm-2"></div>
+			<div class="col-sm-1 ms-1">
+				<div class="form-group">																
+					<select class="form-select" id="taho_month_vdo2">
+						<option selected="" disabled="" value="00">месяц</option>
+						<option value="01">A</option>
+						<option value="02">B</option>
+						<option value="03">C</option>
+						<option value="04">D</option>
+						<option value="05">E</option>
+						<option value="06">F</option>
+						<option value="07">G</option>
+						<option value="08">H</option>
+						<option value="09">J</option>
+						<option value="10">K</option>
+						<option value="11">L</option>
+						<option value="12">M</option>		  
+					</select>
+				</div>
+			</div>						
+			<div class="col-sm-1 ms-1">
+				<div class="form-group">
+					<input type="text" id="taho_year_vdo2" placeholder="год выпуска" maxlength="2" size="2" class="form-control">
+				</div>
+			</div>						
+						
+			<div class="col-sm-3">
+				<div class="form-group">
+					<input type="button" class="btn btn-primary" onclick="convertVDO2()" value="Перевести номер VDO в шестнадцатиричный вид">										
+				</div>
+			</div>
+		</div>								
+	</div>
+				
+	<div class="row">
+		<h5 class="col-sm-2">Результат:</h5>
+	</div>	
+	<div class="row mb-1">	
+		<div class="col-sm-2">
+			<div class="form-group">
+				<input type="text" id="result" class="form-control" style="margin-right: 5px;" size="20">
+			</div>
+		</div>
+		<div class="col-sm-2">
+			<div class="form-group">
+				<input type="button" class="btn btn-primary" onclick="copyText('result')" value="Копировать">
+			</div>
+		</div>
+	</div>			
+</form>
+
+
+<script type="text/javascript">
+	  if (String.prototype.splice === undefined) {
+
+		String.prototype.splice = function (offset, text, removeCount = 0) {
+		  let calculatedOffset = offset < 0 ? this.length + offset : offset;
+		  return (
+			this.substring(0, calculatedOffset) +
+			text +
+			this.substring(calculatedOffset + removeCount)
+		  );
+		};
+	  }
+
+	  function convert() {
+	  var str = document.getElementById("taho_number").value.trim();
+	  var n = str.length;
+
+	  if (n < 19) {
+		alert("Некорректно введён номер");
+		return false;
+	  }
+
+	  if (str.slice(n - 9, n - 8) != " ") {
+		str = str.splice(n - 8, " ");
+		n = str.length;
+	  }
+
+	  if (n > 20) {
+		str = str.slice(n - 20, n);
+		n = str.length;
+	  }
+
+	  if (
+		(n == 20) & (str.slice(11, 12) == " ") &&
+		str.slice(8, 9) == "/" &&
+		str.slice(14, 15) == "/" &&
+		str.slice(17, 18) == "/"
+		)
+	  {
+		console.log("Корректный номер, переводим в hex");
+	  } else {
+		alert("Некорректно введён номер");
+		console.log(
+		  "Некорректно введён номер, не удалось преобразовать",
+		  str
+		);
+		return false;
+	  }
+
+	  var hexString = ("00000000" + (+str.slice(0, 8)).toString(16)).slice(-8);
+
+	  document.getElementById("result").value = (hexString.slice(6, 8) + hexString.slice(4, 6) + hexString.slice(2, 4) + hexString.slice(0, 2)).toUpperCase() + str.slice(9, 11) + str.slice(12, 14) + str.slice(15, 17) + str.slice(18, 20);
+	}
+
+	function convert_hex() {
+	  var str = document.getElementById("taho_number").value.trim();
+	  var n = str.length;
+
+	  if (n != 16) {
+		alert("Некорректно введён номер");
+		return false;
+	  }
+
+	  document.getElementById("result").value = ("00000000" + parseInt(str.slice(6, 8) + str.slice(4, 6) + str.slice(2, 4) + str.slice(0, 2), 16)).slice(-8) + "/" + str.slice(8, 10) + " " + str.slice(10, 12) + "/" + str.slice(12, 14) + "/" + str.slice(14, 16);
+	}
+
+	function convertVDO() {
+	  var str = document.getElementById("taho_number_vdo").value.trim();
+	  var month = document.getElementById("taho_month_vdo").value;
+	  var year = document.getElementById("taho_year_vdo").value.trim();
+	  var n = str.length;
+	  var l = year.length;
+
+	  if (l != 4) {
+		alert("Некорректно введён год изготовления, необходимо 4 символа");
+		return false;
+	  }
+
+	  if (month == "00") {
+		alert("Не выбран месяц изготовления");
+		return false;
+	  }
+
+	  if (n == 0) {
+		alert("Некорректно введён номер");
+		return false;
+	  }
+
+	  var hexString = ("00000000" + (+str.slice(0, 8)).toString(16)).slice(-8);
+
+	  document.getElementById("result").value = (hexString.slice(6, 8) + hexString.slice(4, 6) + hexString.slice(2, 4) + hexString.slice(0, 2)).toUpperCase() + month + year.slice(2, 4) + "06A1";
+	}
+
+	function convertVDO2() {
+	  var str = document.getElementById("taho_number_vdo").value.trim();
+	  var month = document.getElementById("taho_month_vdo2").value;
+	  var year = document.getElementById("taho_year_vdo2").value.trim();
+	  var n = str.length;
+	  var l = year.length;
+
+	  if (l != 2) {
+		alert("Некорректно введён год");
+		return false;
+	  }
+
+	  if (month == "00") {
+		alert("Не выбран месяц изготовления");
+		return false;
+	  }
+
+	  if (n == 0) {
+		alert("Некорректно введён номер");
+		return false;
+	  }
+
+	  var hexString = ("00000000" + (+str.slice(0, 8)).toString(16)).slice(-8);
+
+	  document.getElementById("result").value = (hexString.slice(6, 8) + hexString.slice(4, 6) + hexString.slice(2, 4) + hexString.slice(0, 2)).toUpperCase() + month + year + "06A1";
+	}
+
+	function copyText(elementID) {
+	  var copyText = document.getElementById(elementID).value;
+	  navigator.clipboard.writeText(copyText);
+	}
+
+	function changeView(id){
+		document.getElementById("01").style.display = 'none';
+		document.getElementById("02").style.display = 'none';
+		document.getElementById(id.value).style.display = 'flex';
+	}
+</script>
 
 @code {
+
+    
+
 
 }
