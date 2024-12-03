@@ -17,13 +17,13 @@
     </p>
 
     <p class="row align-items-center">
-        <label class="col-3">Запросить файл</label>
-        <button class="btn btn-outline-primary col-2" @onclick="loadFromAtlas" disabled="@LoadingStatus">Запрос на портал</button>
+        <label class="col-3">Запросить данные</label>
+        <button class="btn btn-outline-primary col-2" @onclick="loadFromAtlas" disabled="@LoadingStatus">Запрос в Атлас</button>
         <label style="display: @(LoadingStatus ? "block" : "none")">Идёт загрузка...</label>
     </p>
 
     <p class="row align-items-center">
-        <label class="col-3">Файл для загрузки в базу данных</label>
+        <label class="col-3">Файл для загрузки в БД</label>
         <button class="btn btn-outline-primary col-2" @onclick="selectFile">Выбрать файл</button>
         @if (filePath != null)
         {
@@ -31,7 +31,7 @@
         }
         else
         {
-            <label class="col-2 mx-2 fs-6">Файл не выбран!</label>
+            <label class="col-3 mx-2 fs-6">Файл не выбран!</label>
         }
     </p>
 

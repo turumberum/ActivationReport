@@ -1,4 +1,4 @@
-﻿@page "/converter"
+﻿@page "/"
 
 <h3>Преобразование номера тахографа "ШТРИХ-ТахоRUS"</h3>
 
@@ -8,12 +8,12 @@
 	<br>
 	<h5>Что переводить:</h5>
 	<div class="row mb-2">
-		<div class="col-sm-2">
+		<div class="col-3">
 			<div class="form-group">
 				<input type="text" id="taho_number" maxlength="22" required="" class="form-control">
 			</div>
 		</div>
-		<div class="col-sm-4">
+		<div class="col-4">
 			<div class="form-group">
 				<input type="button" class="btn btn-primary" onclick="convert()" value="Перевести номер &quot;ШТРИХ-ТахоRUS&quot; из десятичного вида в шестнадцатеричный">
 			</div>
@@ -21,7 +21,7 @@
 	</div>
 				
 	<div class="row mb-2">
-		<div class="col-sm-2">
+		<div class="col-3">
 		</div>
 		<div class="col-sm-4">
 			<div class="form-group">
@@ -31,20 +31,20 @@
 	</div>
 				
 	<div class="row mb-2 align-items-center">
-		<div class="col-sm-2">
+		<div class="col-3">
 			<h6 class="d-flex justify-content-end">Номер VDO (8 символов):</h6>
 		</div>
-		<div class="col-sm-2">
+		<div class="col-3">
 			<div class="form-group">							
 				<input type="text" id="taho_number_vdo" maxlength="8" size="8" class="form-control">
 			</div>
 		</div>
 	</div>	
 	<div class="row mb-1 align-items-center">
-		<div class="col-sm-2">
+		<div class="col-3">
 			<h6 class="d-flex justify-content-end">Дата изготовления:</h6>							
 		</div>
-		<div class="col-sm-2">
+		<div class="col-3">
 			<select id="category" class="form-select" onchange="changeView(this)">
 				<option selected="" disabled="">выбрать источник информации</option>
 				<option value="01">из распечатки</option>
@@ -55,9 +55,9 @@
 					
 	<div class="row mb-1 align-items-center">
 		<div class="row mb-1 align-items-center" id="01" style="display:none;">					
-			<div class="col-sm-2"></div>
+			<div class="col-3"></div>
 							
-			<div class="col-sm-1 ms-1">
+			<div class="col-2 ms-1">
 				<div class="form-group">																
 					<select class="form-select" id="taho_month_vdo">
 						<option selected="" disabled="" value="00">месяц</option>
@@ -76,13 +76,13 @@
 					</select>
 				</div>
 			</div>						
-			<div class="col-sm-1 ms-1">
+			<div class="col-2 ms-1">
 				<div class="form-group">
 					<input type="text" id="taho_year_vdo" placeholder="год выпуска" maxlength="4" size="4" class="form-control">
 				</div>
 			</div>
 							
-			<div class="col-sm-3">
+			<div class="col-3">
 			<div class="form-group">
 				<input type="button" class="btn btn-primary" onclick="convertVDO()" value="Перевести номер VDO в шестнадцатиричный вид">										
 			</div>
@@ -90,8 +90,8 @@
 		</div>
 						
 		<div class="row mb-1 align-items-center" id="02" style="display:none;">	
-			<div class="col-sm-2"></div>
-			<div class="col-sm-1 ms-1">
+			<div class="col-3"></div>
+			<div class="col-2 ms-1">
 				<div class="form-group">																
 					<select class="form-select" id="taho_month_vdo2">
 						<option selected="" disabled="" value="00">месяц</option>
@@ -110,13 +110,13 @@
 					</select>
 				</div>
 			</div>						
-			<div class="col-sm-1 ms-1">
+			<div class="col-2 ms-1">
 				<div class="form-group">
 					<input type="text" id="taho_year_vdo2" placeholder="год выпуска" maxlength="2" size="2" class="form-control">
 				</div>
 			</div>						
 						
-			<div class="col-sm-3">
+			<div class="col-3">
 				<div class="form-group">
 					<input type="button" class="btn btn-primary" onclick="convertVDO2()" value="Перевести номер VDO в шестнадцатиричный вид">										
 				</div>
@@ -125,15 +125,15 @@
 	</div>
 				
 	<div class="row">
-		<h5 class="col-sm-2">Результат:</h5>
+		<h5 class="col-3">Результат:</h5>
 	</div>	
 	<div class="row mb-1">	
-		<div class="col-sm-2">
+		<div class="col-3">
 			<div class="form-group">
 				<input type="text" id="result" class="form-control" style="margin-right: 5px;" size="20">
 			</div>
 		</div>
-		<div class="col-sm-2">
+		<div class="col-2">
 			<div class="form-group">
 				<input type="button" class="btn btn-primary" onclick="copyText('result')" value="Копировать">
 			</div>

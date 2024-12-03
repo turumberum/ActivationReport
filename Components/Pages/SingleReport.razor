@@ -27,16 +27,16 @@
     }
 
     <p class="row justify-content-between">
-        <div class="col-3">
+        <div class="col-4">
             <label>Начало:</label>
             <input type="date" @bind="startDate" />
         </div>
-        <div class="col-3">
+        <div class="col-4">
             <label>Окончание:</label>
             <input type="date" @bind="finishDate" />
         </div>
-            <input type="checkbox" id=mail class="btn-check col-2" @bind="sendMail" @onclick="changeSendMail" />
-            <label for="mail" class="btn btn-outline-dark col-2">Отправлять на почту</label>
+            <input type="checkbox" id=mail class="btn-check col-3" @bind="sendMail" @onclick="changeSendMail" />
+            <label for="mail" class="btn btn-outline-dark col-3">Отправлять на почту</label>
         @if (selectedCompany != null && folderPath != null)
         {
             <button class="btn btn-success col-3" @onclick="createReport">Сформировать отчёт</button>

@@ -2,6 +2,25 @@
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
+@media (min-resolution: 120dpi) {
+    body {
+        font-size: 1em;
+    }
+
+    html {
+        font-size: 0.8em;
+    }
+}
+
+@media (min-resolution: 200dpi) {
+    body {
+        font-size: 1em;
+    }
+    html {
+        font-size: 1em;
+    }
+}
+
 a, .btn-link {
     color: #006bb7;
 }

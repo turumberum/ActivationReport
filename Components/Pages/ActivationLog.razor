@@ -1,4 +1,4 @@
-﻿@page "/"
+﻿@page "/log"
 @using System.Text
 @using ActivationReport.Models
 @using CommunityToolkit.Maui.Views
@@ -170,11 +170,11 @@
 
                     // Добавляем данные по блоку СКЗИ
                     line += $"Версия: {ReadChars(record, ref position, 16)}, \n";
-                    line += $"КС: {ReadFixedStringFromByte(record, ref position, 8)}, \n";
+                    line += $"КС: {ReadFixedStringFromByte(record, ref position, 8)}, ";
                     line += $"ГНСС: {ReadFixedStringFromByte(record, ref position, 8)}, \n";
-                    line += $"Дата производства: {BcdToDate(ReadBytes(record, ref position, 6))}, \n";
+                    line += $"Дата производства: {BcdToDate(ReadBytes(record, ref position, 6))}, ";
                     line += $"Производитель: {ReadCardString(ReadBytes(record, ref position, 36))}, \n";
-                    line += $"Рег.номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, \n"; //Encoding.UTF8.GetString(br.ReadBytes(16))
+                    line += $"Рег.номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, "; //Encoding.UTF8.GetString(br.ReadBytes(16))
                     line += $"Серийный номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, \n";
 
                     // Пустые символы в конце строки
