@@ -101,8 +101,8 @@
 
     static void ReadBinaryFile(string filePath)
     {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);   
-
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        lines.Clear();
         byte computedCRC;
         byte actualCRC;
 
@@ -144,16 +144,17 @@
                     switch (eventType)
                     {
                         case 1:
+                            break; // номер 0 0 32 32 32 32 32 32 32...
                         case 2:
                         case 3:
                         case 4:
                         case 5:
                         case 6:
-                            line += $"Номер карты: {ReadFixedStringFromByte(record, ref position, 18)}, ";
+                            line += $"Номер карты: {ReadCardNumber(ReadBytes(record, ref position, 18))}, ";
                             break;
                         case 7:
                         case 10:
-                            line += br.ReadBoolean() ? "Да" : "Нет"; // Проверить
+                            line += (ReadByte(record, ref position) == 1 ? "Да, " : "Нет, "); // Проверить
                             break;
                         case 12:
                             line += $"Номер карты: {ReadFixedStringFromByte(record, ref position, 18)}, ";
@@ -162,36 +163,42 @@
                             line += $"Макс.скорость {br.ReadByte()}, ";
                             break;
                         case 14:
-                            // line += $"Время отключения питания: {DateTimeOffset.FromUnixTimeSeconds(ReadInt(record, ref position)).DateTime}, ";
-                            // line += $"Причина: {ReadInt(record, ref position)}, ";
-                            // line += $"Статус СКЗИ: {ReadFixedStringFromByte(record, ref position, 10)}, ";
+                            line += $"Время отключения питания: {DateTimeOffset.FromUnixTimeSeconds(ReadInt(record, ref position)).DateTime}, ";
+                            line += $"Отключение: {(ReadInt(record, ref position) == 0 ? "корректно" : "некоррктно!")}, \n ";
+
+                            //Разбор статуса СКЗИ                            
+                            line += $"{GetNKMActivationStatus(ReadByte(record, ref position))}";
+                            line += $"{GetNKMStatus(ReadByte(record, ref position))}";
+                            line += $"{GetNKMMovementStatus(ReadByte(record, ref position))}";
+                            line += $"{GetNKMCardStatus(ReadByte(record, ref position))}";
+                            line += $"Дата окончания сертификата: {BcdToDate(ReadBytes(record, ref position, 6))} \n";
+
+                            // Добавляем данные по блоку СКЗИ
+                            line += $"Версия: {ReadChars(record, ref position, 16)}, \n";
+                            line += $"КП: {ReadFixedStringFromByte(record, ref position, 8)}, ";
+                            line += $"ГНСС: {ReadFixedStringFromByte(record, ref position, 8)}, \n";
+                            line += $"Дата производства: {BcdToDate(ReadBytes(record, ref position, 6))}, ";
+                            line += $"Производитель: {ReadCardString(ReadBytes(record, ref position, 36))}, \n";
+                            line += $"Серийный номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, "; //Encoding.UTF8.GetString(br.ReadBytes(16))
+                            line += $"Заводской номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, \n";
                             break;
                     }
-
-                    // Добавляем данные по блоку СКЗИ
-                    line += $"Версия: {ReadChars(record, ref position, 16)}, \n";
-                    line += $"КС: {ReadFixedStringFromByte(record, ref position, 8)}, ";
-                    line += $"ГНСС: {ReadFixedStringFromByte(record, ref position, 8)}, \n";
-                    line += $"Дата производства: {BcdToDate(ReadBytes(record, ref position, 6))}, ";
-                    line += $"Производитель: {ReadCardString(ReadBytes(record, ref position, 36))}, \n";
-                    line += $"Рег.номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, "; //Encoding.UTF8.GetString(br.ReadBytes(16))
-                    line += $"Серийный номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, \n";
 
                     // Пустые символы в конце строки
                     // var otherByte = br.ReadBytes(256 - (15 + additionalInfoLength));
 
                     // 1 байт CRC
                     //byte crc = br.ReadByte();
-                    line += $"CRC: {actualCRC}";
+                    //line += $"CRC: {actualCRC}";
 
                     //Проверяем CRC
                     if (computedCRC == actualCRC)
                     {
-                        line += " (CRC корректно)";
+                        line += " CRC корректно";
                     }
                     else
                     {
-                        line += " (CRC неверно)";
+                        line += " CRC неверно";
                     }
 
                     lines.Add(line);
@@ -204,6 +211,107 @@
             }
 
         }
+    }
+
+    static string GetNKMActivationStatus(byte data)
+    {
+        int[] bits = new int[8];
+        string output = "Статус активаци блока СКЗИ: \n";
+
+        for (int i = 0; i < 8; i++)
+        {
+            bits[7 - i] = (data >> i) & 1; // Сдвигаем и получаем биты с конца
+        }
+
+        if (bits[7] == 1)
+            output += "Проведена инициализация \n";
+
+        if (bits[6] == 1)
+            output += "Загружены сертификаты/квалифицированные сертификаты \n";
+
+        if (bits[5] == 1)
+            output += "Проведена активация тахографа \n";
+
+        if (bits[4] == 1)
+            output += "Проведена активация транспортного средства \n";
+
+        if (bits[3] == 1)
+            output += "НКМ заблокирован\n";
+
+        return output;
+    }
+
+    static string GetNKMStatus(byte data)
+    {
+        int[] bits = new int[8];
+        string output = "Состояние оборудования: \n";
+
+        for (int i = 0; i < 8; i++)
+        {
+            bits[7 - i] = (data >> i) & 1; // Сдвигаем и получаем биты с конца
+        }
+
+        output += "ГНСС: "          + (bits[7] == 1 ? "готов\n" : "не готов\n");
+        output += "КС: "            + (bits[6] == 1 ? "готов\n" : "не готов\n");
+        output += "Акселерометр: "  + (bits[5] == 1 ? "готов\n" : "не готов\n");
+        output += "Архив НКМ: "     + (bits[4] == 1 ? "готов\n" : "не готов\n");
+        output += "НКМ: "           + (bits[3] == 1 ? "готов\n" : "не готов\n");
+
+        return output;
+    }
+
+    static string GetNKMMovementStatus(byte data)
+    {
+        int[] bits = new int[8];
+        string output = "Состояние движения по данным от тахографа: \n";
+
+        for (int i = 0; i < 8; i++)
+        {
+            bits[7 - i] = (data >> i) & 1; // Сдвигаем и получаем биты с конца
+        }
+
+        output += "Движение: "      + (bits[7] == 1 ? "да\n" : "нет\n");
+        output += "Паром/поезд: "   + (bits[6] == 1 ? "да\n" : "нет\n");
+        output += "Непременимо: "   + (bits[5] == 1 ? "да\n" : "нет\n");
+
+        output += "Состояние движения по данным от акселерометра: \n";
+
+        if (bits[4] == 1)
+        {
+            output += "Накопление информации\n";
+        }
+        else if (bits[3] == 0)
+        {
+            output += "Состояние работы не определено\n";
+        }
+        else if (bits[2] == 1)
+        {
+            output += "Движение: " + (bits[2] == 1 ? "да\n" : "нет\n");
+        }       
+
+        return output;
+    }
+
+    static string GetNKMCardStatus(byte data)
+    {
+        int[] bits = new int[8];
+        string output = "";
+
+        for (int i = 0; i < 8; i++)
+        {
+            bits[7 - i] = (data >> i) & 1; // Сдвигаем и получаем биты с конца
+        }
+
+        output += "Аутентификация карты в слоте 1: "    + (bits[7] == 1 ? "да\n" : "нет\n");
+        output += "Аутентификация карты в слоте 2: "    + (bits[6] == 1 ? "да\n" : "нет\n");
+        output += "Вставлена карта в слот 1: "          + (bits[5] == 1 ? "да\n" : "нет\n");
+        output += "Вставлена карта в слот 2: "          + (bits[4] == 1 ? "да\n" : "нет\n");
+        // output += "Аутентификация карты в слоте 3: "    + (bits[3] == 1 ? "да\n" : "нет\n");
+        // output += "Вставлена карта в слот 3: "          + (bits[2] == 1 ? "да\n" : "нет\n");
+        output += (bits[1] == 1 ? "Сеансовые ключи для удаленного доступа выработаны\n" : "");
+        output += (bits[0] == 1 ? "Отладочная версия ПО\n" : "");
+
+        return output;
     }
 
     static byte CalculateCRC(byte[] record)
@@ -275,7 +383,24 @@
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
         int codePage = bytes[0];
-        return Encoding.GetEncoding("iso-8859-" + codePage.ToString()).GetString(bytes, 1, 35).TrimEnd('\0');
+        //+codePage.ToString()
+        return Encoding.GetEncoding("iso-8859-5").GetString(bytes, 1, 35).TrimEnd('\0');
+    }
+
+    static string ReadCardNumber(byte[] bytes)
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+        int codePage = (int)bytes[1] - 40;
+        string output = "";
+        // switch (bytes[0])
+        // {
+        //     case 0:
+        //         output += "0";
+        //         break;
+        // }
+        output += Encoding.GetEncoding("iso-8859-" + codePage.ToString()).GetString(bytes, 2, 16).TrimEnd('\0');
+        return output;
     }
 
     static string BcdToDate(byte[] bcd)
@@ -312,13 +437,16 @@
             {5,  "Аутентифкация карты в слоте 1"},          // __lrtCard1AuthOk = 5,
             {6,  "Аутентифкация карты в слоте 2"},          // __lrtCard2AuthOk = 6,
             {7,  "Выбор использования блока СКЗИ"},         // __lrtNKMDoActYes_No     =7,
-            {8,  "Выполнена подпись запроса на ктивацию"},  // __lrtNKMDoSignStep1 = 8,
+            {8,  "Выполнена подпись запроса на активацию"}, // __lrtNKMDoSignStep1 = 8,
             {9,  "Переход блока СКЗИ на ШАГ2"},             // __lrtNKMGoToStep2 = 9,
-            {10,  "Выбрана загрузка сертифката"},           // __lrtNKMSelectLoadCerts = 10,
-            {11,  "Загрузка сертифката"},                   // __lrtNKMDoLoadCerts = 11,
-            {12,  "Активация ТС в блоке СКЗИ"},             // __lrtNKMDoVehclActivate = 12,
-            {13,  "Сброс на ШАГ1"},                         // __lrtNKMResetToStep1 = 13,
-            {14,  "Включение питания СКЗИ"},                // __lrtNKMPowerON = 14,
+            {10, "Выбрана загрузка сертифката"},            // __lrtNKMSelectLoadCerts = 10,
+            {11, "Загрузка сертифката"},                    // __lrtNKMDoLoadCerts = 11,
+            {12, "Активация ТС в блоке СКЗИ"},              // __lrtNKMDoVehclActivate = 12,
+            {13, "Сброс на ШАГ1"},                          // __lrtNKMResetToStep1 = 13,
+            {14, "Включение питания СКЗИ"},                 // __lrtNKMPowerON = 14,
+            //{15, "Извлечение карты"},             //
+            //{16, "Перезагрузка"},                 //
+            //{17, "Ошибка выполнения запроса"},    //
         };
 
         return names[eventType];

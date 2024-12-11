@@ -1,0 +1,61 @@
+﻿@page "/search"
+@using System.Text.RegularExpressions
+<h3>Поиск активации в базе данных</h3>
+
+<p>
+    <label>Номер тахографа</label>
+    <input maxlength="16" @bind="skziNumber"/>
+    <input type="checkbox" @bind-value="@extendetSearch"/>
+</p>
+
+@if(result.Count() > 0)
+{    <p>
+        <textarea>
+            @foreach (var str in result)
+            {
+                @str;
+            }
+        </textarea>
+    </p>
+}
+
+
+@if (skziNumber.Length == 16)
+{
+    <button @onclick="() => SearchData(skziNumber)">Поиск</button>
+}
+
+@code {
+    private bool extendetSearch = false;
+    private string? skziNumber = "";
+    private Regex nkm = new Regex(@"\d{2}[A-L]3\w\d{11}");
+    private List<string> result = new();
+
+    private void SearchData(string skzi)
+    {
+        string output = "Данные не найдены";
+        string res;
+        using (var db = new AppDBContext())
+        {
+            if (extendetSearch)
+            {
+                res = db.Activations.Where(a => a.CryptoBlock.Contains(skzi)).FirstOrDefault().ToStringMax();
+            } 
+            else{
+                res = db.Activations.Where(a => a.CryptoBlock.Contains(skzi)).FirstOrDefault().ToStringMin();
+            }
+            
+
+            if (!string.IsNullOrEmpty(res))
+            {
+                result.Add(res);
+            } 
+            else 
+            {
+                result.Add(output);
+            }
+        }       
+
+        //return output;
+    }
+}

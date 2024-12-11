@@ -9,6 +9,8 @@ using ActivationReport.Models;
 using MailKit.Net.Smtp;
 using System.Text;
 using ActivationReport.Components.Pages;
+using MudBlazor;
+using System.Net.Http.Headers;
 
 namespace ActivationReport
 {
@@ -401,6 +403,177 @@ namespace ActivationReport
 
             //Application.Current.MainPage.DisplayAlert("Уведомление",
             //                                          "Файл обработан. В базу данных загружено записей: " + totalCount.ToString(), "Ок");
+        }
+
+        //public static async Task<NetItem> StartRequestFBU()
+        //{
+        //    string token = "";
+        //    string captcha = "https://portal.rosavtotransport.ru";
+        //    CookieContainer cookie = new();
+        //    //string PHPSessionID = "";
+        //    //string captcha2 = "";
+
+        //    Debug.WriteLine($"Делаю запрос на сайт");
+
+        //    //using (var client = new HttpClient())
+        //    //{
+        //    //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
+        //    //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
+        //    //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml", 0.9));
+        //    //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/avif"));
+        //    //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/webp"));
+        //    //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/apng"));
+        //    //    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.8));
+        //    //    //client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/signed-exchange;v=b3", 0.7));
+
+        //    //    //client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+        //    //    //client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
+        //    //    //client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("br"));
+        //    //    //client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("zstd"));
+
+        //    //    client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("ru-RU"));
+        //    //    // client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("ru", 0.9));
+
+        //    //    client.DefaultRequestHeaders.Connection.Add("keep-alive");
+        //    //    client.DefaultRequestHeaders.TryAddWithoutValidation("DNT", "1");
+        //    //    client.DefaultRequestHeaders.Host = "portal.rosavtotransport.ru";
+
+        //    //    client.DefaultRequestHeaders.Add("Sec-CH-UA", "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"");
+        //    //    client.DefaultRequestHeaders.Add("Sec-CH-UA-Mobile", "?0");
+        //    //    client.DefaultRequestHeaders.Add("Sec-CH-UA-Platform", "\"Windows\"");
+        //    //    client.DefaultRequestHeaders.Add("Sec-Fetch-Dest", "document");
+        //    //    client.DefaultRequestHeaders.Add("Sec-Fetch-Mode", "navigate");
+        //    //    client.DefaultRequestHeaders.Add("Sec-Fetch-Site", "none");
+        //    //    client.DefaultRequestHeaders.Add("Sec-Fetch-User", "?1");
+        //    //    client.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
+        //    //    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36");
+
+
+
+        //    //    var response = await client.GetAsync("https://portal.rosavtotransport.ru/check");
+        //    //    var getCookieValue = response.Headers.GetValues("Set-Cookie");
+
+        //    //    cookie = getCookieValue.FirstOrDefault().Split(" ")[0];
+
+        //    //    var responseString = await response.Content?.ReadAsStringAsync();
+        //    //    var parser = new AngleSharp.Html.Parser.HtmlParser();
+        //    //    var document = parser.ParseDocument(responseString);
+        //    //    captcha += document.QuerySelector($"#yiiCaptcha").GetAttribute("src");
+        //    //    token = document.QuerySelector("[name=\"csrf-token\"]").GetAttribute("content");
+        //    //    captcha2 = "https://portal.rosavtotransport.ru" + document.QuerySelector($"#recallform-captcha-image").GetAttribute("src");
+
+        //    //    var img2 = await client.GetAsync(captcha2);
+        //    //    var getSession2 = img2.Headers.GetValues("Set-Cookie");
+        //    //    PHPSessionID = getSession2.FirstOrDefault().Split(" ")[0];
+        //    //}
+
+
+        //    using (var driver = new ChromeDriver())
+        //    {
+        //        driver.Navigate().GoToUrl("https://portal.rosavtotransport.ru/check");
+
+        //        // Ожидание загрузки капчи
+        //        var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(driver, TimeSpan.FromSeconds(5));
+        //        var captchaImage = wait.Until(d => d.FindElement(By.Id("yiiCaptcha")));
+        //        token += wait.Until(d => d.FindElement(By.Name("csrf-token")).GetAttribute("content"));
+
+        //        captcha = captchaImage.GetAttribute("src");
+        //        //Console.WriteLine("Ссылка на капчу: " + captchaImageUrl);
+
+        //        var cookies = driver.Manage().Cookies.AllCookies;
+        //        //var cookieContainer = new CookieContainer();
+
+        //        foreach (var cook in cookies)
+        //        {
+        //            cookie.Add(new System.Net.Cookie(cook.Name, cook.Value, cook.Path, cook.Domain));
+        //        }
+
+        //        Console.WriteLine("Ссылка на капчу: ");
+
+        //        return new NetItem
+        //        {
+        //            cookie = cookie,
+        //            token = token,
+        //            captcha = captcha
+        //        };
+        //    }
+
+
+        //    //var img = await client.GetAsync(captcha);
+        //    //var getSession = img.Headers.GetValues("Set-Cookie");
+        //    //PHPSessionID = getSession.FirstOrDefault().Split(" ")[0];
+
+        //}
+
+        public static async Task RequestFBU(string token, string enteredCaptcha, CookieContainer cookie, string data, string type)
+        {
+
+            Debug.WriteLine($"Делаю запрос в ФБУ");
+
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = cookie,
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            };
+
+            //handler.CookieContainer.Add(new Uri("https://portal.rosavtotransport.ru"), new System.Net.Cookie { Name = "_csrf", Value=cookie.Substring(6, cookie.Length-7) });
+            //handler.CookieContainer.Add(new Uri("https://portal.rosavtotransport.ru"), new System.Net.Cookie { Name = "PHPSESSID", Value= phpsessionid.Substring(10, phpsessionid.Length-11) });
+
+            using (var client = new HttpClient(handler))
+            {
+                //client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+                //client.DefaultRequestHeaders.Accept.ParseAdd("*/*");
+                //client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/x-www-form-urlencoded"));
+                //client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate");
+                //client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7,sr;q=0.6");
+                //client.DefaultRequestHeaders.Add("DNT", "1");
+                //client.DefaultRequestHeaders.Add("Origin", "https://portal.rosavtotransport.ru");
+                //client.DefaultRequestHeaders.Referrer = new Uri("https://portal.rosavtotransport.ru/check");
+                //client.DefaultRequestHeaders.Add("X-CSRF-Token", token);
+                //client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");                
+
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+                client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+                client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("deflate"));
+                client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("br"));
+                client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("zstd"));
+                client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("ru-RU"));
+                client.DefaultRequestHeaders.Connection.Add("keep-alive");
+                client.DefaultRequestHeaders.Add("DNT", "1");
+                client.DefaultRequestHeaders.Host = "portal.rosavtotransport.ru";
+                client.DefaultRequestHeaders.Add("Origin", "https://portal.rosavtotransport.ru");
+                client.DefaultRequestHeaders.Add("Referer", "https://portal.rosavtotransport.ru/check");
+                client.DefaultRequestHeaders.Add("X-CSRF-Token", token);
+                client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+                client.DefaultRequestHeaders.Add("sec-ch-ua", "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"");
+                client.DefaultRequestHeaders.Add("sec-ch-ua-mobile", "?0");
+                client.DefaultRequestHeaders.Add("sec-ch-ua-platform", "\"Windows\"");
+
+                var content = new FormUrlEncodedContent(new[]
+                 {
+                    new KeyValuePair<string, string>("_csrf", token),
+                    new KeyValuePair<string, string>("type", type),
+                    new KeyValuePair<string, string>("tachoSerialNumber", data),
+                    new KeyValuePair<string, string>("skziSerialNumber", data),
+                    new KeyValuePair<string, string>("cardSerialNumber", ""),
+                    new KeyValuePair<string, string>("cardBeginDate", ""),
+                    new KeyValuePair<string, string>("dateFrom", ""),
+                    new KeyValuePair<string, string>("tslinkSkziSerialNumber", ""),
+                    new KeyValuePair<string, string>("tslinkTachoSerialNumber", ""),
+                    new KeyValuePair<string, string>("captcha", enteredCaptcha)
+                });
+                //Debug.WriteLine(content);
+                var response = await client.PostAsync("https://portal.rosavtotransport.ru/check", content);
+
+
+
+                var responseString = await response.Content.ReadAsStringAsync();
+
+                var parser = new AngleSharp.Html.Parser.HtmlParser();
+                var document = parser.ParseDocument(responseString);
+
+                var test1 = 0;
+            }
         }
     }
 } 

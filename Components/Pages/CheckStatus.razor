@@ -1,0 +1,52 @@
+﻿@page "/status"
+@using System.Text.RegularExpressions
+@using System.Diagnostics
+@using System.Net
+@using static ActivationReport.Services
+<h3>Проверка статуса блока СКЗИ</h3>
+
+<p class="row align-items-center justify-content-start gap-2">
+    <label class="col-2">Номер блока СКЗИ:</label>
+    <input class="col-2" type="text" @bind="@data" maxlength="16" />    
+    <img class="col-1" src="@captcha" width="120" height="50" />
+    @* <img class="col-1" src="@captcha2" width="120" height="50" /> *@
+    <input class="col-1" type="text" maxlength="4" @bind="@enteredCapcha" />
+    <button class="btn btn-primary col-2" @onclick="SendRequest">Проверить</button>  
+</p>
+
+@code {
+    private string data;
+    private string captcha;
+    // private string captcha2;
+    private string token;
+    private CookieContainer cookie;
+
+    private string phpsessionid;
+    private string enteredCapcha;
+    private Regex nkm = new Regex(@"\d{2}[A-L]3\w\d{11}");
+
+    private async Task SendRequest()
+    {
+        if (!string.IsNullOrEmpty(data))
+        {
+            if (nkm.IsMatch(data.ToUpper()))
+            {
+                Debug.WriteLine("СКЗИ");
+                await Services.RequestFBU(token, enteredCapcha, cookie, data.ToUpper(), "skzi");
+            }
+            else
+            {
+                Debug.WriteLine("Тахограф");
+                await Services.RequestFBU(token, enteredCapcha, cookie, data.ToUpper(), "tachograph");
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        //NetItem startData = await Services.StartRequestFBU();
+        // captcha = startData.captcha;
+        // token = startData.token;
+        // cookie = startData.cookie;
+    }
+}
