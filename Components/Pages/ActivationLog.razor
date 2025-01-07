@@ -157,10 +157,10 @@
                             line += (ReadByte(record, ref position) == 1 ? "Да, " : "Нет, "); // Проверить
                             break;
                         case 12:
-                            line += $"Номер карты: {ReadFixedStringFromByte(record, ref position, 18)}, ";
-                            line += $"VIN {ReadFixedStringFromByte(record, ref position, 17)}, ";
-                            line += $"Гос.номер {ReadFixedStringFromByte(record, ref position, 15)}, ";
-                            line += $"Макс.скорость {br.ReadByte()}, ";
+                            line += $"Номер карты: {ReadCardNumber(ReadBytes(record, ref position, 18))}, ";
+                            line += $"VIN {Encoding.ASCII.GetString(ReadBytes(record, ref position, 17))}, ";
+                            line += $"Гос.номер {ReadVRN(ReadBytes(record, ref position, 15))}, ";
+                            line += $"Макс.скорость {ReadByte(record, ref position)}, ";
                             break;
                         case 14:
                             line += $"Время отключения питания: {DateTimeOffset.FromUnixTimeSeconds(ReadInt(record, ref position)).DateTime}, ";
@@ -181,6 +181,11 @@
                             line += $"Производитель: {ReadCardString(ReadBytes(record, ref position, 36))}, \n";
                             line += $"Серийный номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, "; //Encoding.UTF8.GetString(br.ReadBytes(16))
                             line += $"Заводской номер: {Encoding.UTF8.GetString(ReadBytes(record, ref position, 16))}, \n";
+                            break;
+                        case 18:
+                            line += $"Код ошибки: {ReadInt(record, ref position)}, ";
+                            line += $"Код ошибки НКМ: {ReadInt(record, ref position) }, ";
+                            line += $"Код команды: {ReadInt(record, ref position)}, \n ";
                             break;
                     }
 
@@ -378,6 +383,16 @@
         return BitConverter.ToString(buffer).Replace("-", "").TrimEnd('\0');
     }
 
+    static string ReadVRN(byte[] bytes)
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+        int country = bytes[0];
+        int codePade = bytes[1];
+        //+codePage.ToString()
+        return Encoding.GetEncoding("iso-8859-5").GetString(bytes, 2, 13).TrimEnd('\0');
+    }
+
     static string ReadCardString(byte[] bytes)
     {
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
@@ -444,9 +459,10 @@
             {12, "Активация ТС в блоке СКЗИ"},              // __lrtNKMDoVehclActivate = 12,
             {13, "Сброс на ШАГ1"},                          // __lrtNKMResetToStep1 = 13,
             {14, "Включение питания СКЗИ"},                 // __lrtNKMPowerON = 14,
-            //{15, "Извлечение карты"},             //
-            //{16, "Перезагрузка"},                 //
-            //{17, "Ошибка выполнения запроса"},    //
+            {15, "Извлечение карты из слота 1"},            // __lrtCardWithdrawReader1 =15,
+            {16, "Извлечение карты из слота 2"},            // __lrtCardWithdrawReader2 =16,
+            {17, "Перезагрузка в процессе активации"},      // __lrtNKMRestartTachoWhileActivation =17,
+            {18, "Ошибка в работе СКЗИ"},                   // __lrtNKMErrorData                   =18,
         };
 
         return names[eventType];

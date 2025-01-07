@@ -273,8 +273,10 @@ namespace ActivationReport
                                     .Select(rawComment => rawComment.Split(new string[] { "^" }, StringSplitOptions.None)[1].Split(']')[0])
                                     .FirstOrDefault();
 
-                    string filePath = "C:\\Users\\Makar\\Desktop\\TEST\\" + fileName;
-        // Сделать поле для выбора
+                    
+                    string filePath = Preferences.Default.Get("AtlasFolder", "") + "\\" + fileName;
+                    Debug.WriteLine(filePath);
+
                     using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                     {
                         Debug.WriteLine($"Запрос на скачивание");

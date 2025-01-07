@@ -18,7 +18,15 @@
 
     <p class="row align-items-center">
         <label class="col-3">Запросить данные</label>
-        <button class="btn btn-outline-primary col-2" @onclick="loadFromAtlas" disabled="@LoadingStatus">Запрос в Атлас</button>
+        @if (string.IsNullOrEmpty(folderPath))
+        {
+            <button class="btn btn-primary col-3" @onclick="pickFolder">Выбор папки для отчётов</button>
+        } 
+        else
+        {
+            <button class="btn btn-outline-primary col-2" @onclick="loadFromAtlas" disabled="@LoadingStatus">Запрос в Атлас</button>
+            <label class="col-6">@folderPath</label>
+        }        
         <label style="display: @(LoadingStatus ? "block" : "none")">Идёт загрузка...</label>
     </p>
 
@@ -45,6 +53,7 @@
 
 @code {
     public static string? filePath;
+    public static string? folderPath = Preferences.Default.Get("AtlasFolder", "");
     private static string? baseCount;
     private static string? baseDateFirst;
     private static string? baseDateLast;
@@ -67,6 +76,8 @@
         if (response != null)
             filePath = response.FullPath;
     }
+
+    private async Task pickFolder() => folderPath = await Helpers.PickFolder("AtlasFolder");
 
     private async Task loadFromAtlas()
     {
