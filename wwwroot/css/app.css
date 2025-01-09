@@ -40,6 +40,11 @@
     }
 }*/
 
+textarea {
+    resize: none;
+    overflow: hidden;
+}
+
 a, .btn-link {
     color: #006bb7;
 }

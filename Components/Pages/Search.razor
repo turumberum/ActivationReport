@@ -1,61 +1,217 @@
 ﻿@page "/search"
 @using System.Text.RegularExpressions
+@using ActivationReport.Models
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
 <h3>Поиск активации в базе данных</h3>
 
 <p>
-    <label>Номер тахографа</label>
-    <input maxlength="16" @bind="skziNumber"/>
-    <input type="checkbox" @bind-value="@extendetSearch"/>
+    <input type="checkbox" id="ext" class="btn-check col-3" @bind-value="@extendetSearch" />
+    <label for="ext" class="btn btn-outline-success col-3">Выдача расширенных данных</label>
 </p>
 
-@if(result.Count() > 0)
-{    <p>
-        <textarea>
-            @foreach (var str in result)
+<p >
+    <label class="form-label">Номер блока СКЗИ</label>    
+    <textarea class="form-control" @ref="textarea1" @oninput="() => OnTextInput(textarea1)" @bind="@NKMNumbers" />
+</p>
+<p>
+    <label class="form-label">Номер тахографа</label>
+    <textarea class="form-control" @ref="textarea2" @oninput="() => OnTextInput(textarea2)" @bind="@TachoNumbers" />
+</p>
+<p> 
+    <label class="form-label">VIN номер</label> 
+    <textarea class="form-control" @ref="textarea3" @oninput="() => OnTextInput(textarea3)" @bind="@VINNumbers" />
+</p>
+<p>
+    <label class="form-label">Номер ПТС</label>
+    <textarea class="form-control" @ref="textarea4" @oninput="() => OnTextInput(textarea4)" @bind="@PassportNumbers" />
+</p>
+<p>
+    <label class="form-label">Гос. номер</label>
+    <textarea class="form-control" @ref="textarea5" @oninput="() => OnTextInput(textarea5)" @bind="@VRNNumbers" />
+</p>
+
+<button class="btn btn-primary col-2" @onclick="Parse">Поиск данных</button>
+
+@if(Result.Count() > 0)
+{    
+    <p class="mt-2">
+        <label class="form-label">Результаты поиска</label>
+        <textarea class="form-control" @ref="textarea6" @onfocus="() => OnTextInput(textarea6)">
+            @foreach (string str in Result)
             {
-                @str;
+                @($"{str}\n")
             }
         </textarea>
     </p>
 }
 
-
-@if (skziNumber.Length == 16)
-{
-    <button @onclick="() => SearchData(skziNumber)">Поиск</button>
-}
-
 @code {
-    private bool extendetSearch = false;
-    private string? skziNumber = "";
-    private Regex nkm = new Regex(@"\d{2}[A-L]3\w\d{11}");
-    private List<string> result = new();
+    private string? NKMNumbers;
+    private string? TachoNumbers;
+    private string? VINNumbers;
+    private string? VRNNumbers;
+    private string? PassportNumbers;
 
-    private void SearchData(string skzi)
+    private List<string> ListNKMNumbers = new();
+    private List<string> ListTachoNumbers = new();
+    private List<string> ListVINNumbers = new();
+    private List<string> ListVRNNumbers = new();
+    private List<string> ListPassportNumbers = new();
+
+    private bool extendetSearch = false;
+
+    private Regex nkm = new Regex(@"\d{2}[A-L]3\w\d{11}");
+
+    private List<string> Result = new();
+
+    private ElementReference textarea1;
+    private ElementReference textarea2;
+    private ElementReference textarea3;
+    private ElementReference textarea4;
+    private ElementReference textarea5;
+    private ElementReference textarea6;
+
+    private async Task OnTextInput(ElementReference textarea)
     {
-        string output = "Данные не найдены";
-        string res;
+        // Вызов JavaScript функции для изменения высоты
+        await JSRuntime.InvokeVoidAsync("adjustTextareaHeight", textarea);
+    }
+
+    private void Parse()
+    {
+        if (!string.IsNullOrEmpty(NKMNumbers)){
+            var numbers = NKMNumbers.Split('\n').Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.ToUpper()).ToArray();
+            foreach (var num in numbers)
+            {
+                if (nkm.IsMatch(num))
+                {
+                    ListNKMNumbers.Add(num);
+                }
+                else
+                {
+                    Application.Current.MainPage.DisplayAlert("Уведомление", "Некорректный номер СКЗИ: " + num, "Ок");
+                    return;
+                }
+            }            
+        }
+
+        if (!string.IsNullOrEmpty(TachoNumbers))
+        {
+            var numbers = TachoNumbers.Split('\n').Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.ToUpper()).ToArray();
+            foreach (var num in numbers)
+            {
+                if (num.Length == 16)
+                {
+                    ListTachoNumbers.Add(num);
+                }
+                else
+                {
+                    Application.Current.MainPage.DisplayAlert("Уведомление", "Некорректный номер тахографа: " + num, "Ок");
+                    return;
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(VINNumbers))
+        {
+            var numbers = VINNumbers.Split('\n').Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.ToUpper()).ToArray();
+            foreach (var num in numbers)
+            {
+                if (num.Length == 17)
+                {
+                    ListVINNumbers.Add(num);
+                }
+                else
+                {
+                    Application.Current.MainPage.DisplayAlert("Уведомление", "Некорректный VIN номер: " + num, "Ок");
+                    return;
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(VRNNumbers))
+        {
+            var numbers = VRNNumbers.Split('\n').Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.ToUpper()).ToArray();
+            foreach (var num in numbers)
+            {
+                ListVRNNumbers.Add(num);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(PassportNumbers))
+        {
+            var numbers = PassportNumbers.Split('\n').Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.ToUpper()).ToArray();
+            foreach (var num in numbers)
+            {               
+                ListPassportNumbers.Add(num);               
+            }
+        }
+
+        SearchData();
+    }
+
+    private void SearchData()
+    {        
+        List<string> res = new();
+        HashSet<Activation> tempRes = new();
+
         using (var db = new AppDBContext())
         {
-            if (extendetSearch)
-            {
-                res = db.Activations.Where(a => a.CryptoBlock.Contains(skzi)).FirstOrDefault().ToStringMax();
-            } 
-            else{
-                res = db.Activations.Where(a => a.CryptoBlock.Contains(skzi)).FirstOrDefault().ToStringMin();
-            }
-            
 
-            if (!string.IsNullOrEmpty(res))
+            if (ListNKMNumbers.Count > 0)
             {
-                result.Add(res);
-            } 
-            else 
-            {
-                result.Add(output);
+                ListNKMNumbers.ForEach(x => tempRes.Add(db.Activations.Where(a => a.CryptoBlock.Contains(x)).FirstOrDefault()));
             }
-        }       
 
-        //return output;
+            if (ListTachoNumbers.Count > 0)
+            {
+                ListTachoNumbers.ForEach(x => tempRes.Add(db.Activations.Where(a => a.TachoNumber.Contains(x)).FirstOrDefault()));
+            }
+
+            if (ListVINNumbers.Count > 0)
+            {
+                ListVINNumbers.ForEach(x => tempRes.Add(db.Activations.Where(a => a.VIN.Contains(x)).FirstOrDefault()));
+            }
+
+            if (ListVRNNumbers.Count > 0)
+            {
+                ListVRNNumbers.ForEach(x => tempRes.Add(db.Activations.Where(a => a.VRN.Contains(x)).FirstOrDefault()));
+            }
+
+            if (ListPassportNumbers.Count > 0)
+            {
+                ListPassportNumbers.ForEach(x => tempRes.Add(db.Activations.Where(a => a.VehiclePassport.Contains(x)).FirstOrDefault()));
+            }            
+        }
+
+        if (tempRes.Count > 0 && tempRes.First() != null)
+        {
+            foreach (var act in tempRes)
+            {
+                if (extendetSearch)
+                {
+                    res.Add(act.ToStringMax());
+                }
+                else
+                {
+                    res.Add(act.ToStringMin());
+                    //res = db.Activations.Where(a => a.CryptoBlock.Contains(skzi)).FirstOrDefault().ToStringMin();
+                }
+            }
+        }
+        else
+        {
+            res.Add("Данные не найдены");
+        }
+
+        Result = res;
+
+        ListNKMNumbers.Clear();
+        ListTachoNumbers.Clear();
+        ListVINNumbers.Clear();
+        ListVRNNumbers.Clear();
+        ListPassportNumbers.Clear();
     }
 }
