@@ -1,5 +1,6 @@
 ﻿@using ActivationReport.Models
 @using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
 
 <article>
     @if (ECompany.Id > 1)
@@ -10,13 +11,13 @@
     {
         <h4>Создание новой компании</h4>
     }
-    
+
     <EditForm Model="@ECompany" OnValidSubmit="HandleValidSubmit">
         <DataAnnotationsValidator />
-       
+
         <p class="row">
             <label class="col-3">Название компании</label>
-            <InputText @bind-Value="ECompany.Name" class="col-8"/>
+            <InputText @bind-Value="ECompany.Name" @onblur=ReplaceSign class="col-8"/>
         </p>
         <p class="row">   
             <label class="col-3">Трудоустроен к нам</label>
@@ -30,7 +31,7 @@
             <label class="col-3">Электронная почта</label>
             <InputText @bind-Value="ECompany.Email" class="col-8" />
         </p>
-        
+
         <p class="row">
             @if (ECompany.Cards != null && ECompany.Cards.Count > 0)
             {
@@ -71,6 +72,11 @@
     public EventCallback<Company> ECompanyChanged { get; set; }
 
     private List<string> validationMessages = new List<string>();
+
+    private void ReplaceSign()
+    {
+        ECompany.Name = Regex.Replace(ECompany.Name, @"[^a-zA-Zа-яА-Я0-9\s]", string.Empty);
+    }
 
     private async Task cancelled()
     {
